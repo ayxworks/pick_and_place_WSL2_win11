@@ -41,6 +41,12 @@
     <group name="gripper">
       <joint name="finger_joint"/>
     </group>
+    <group_state name="open" group="gripper">
+      <joint name="finger_joint" value="0" />
+    </group_state>
+    <group_state name="closed" group="gripper">
+      <joint name="finger_joint" value="0.698" />
+    </group_state>
     <!--END EFFECTOR - Purpose - Represent information about an end effector.-->
     <end_effector
       name="robotiq_2f140"
