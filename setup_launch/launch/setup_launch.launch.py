@@ -53,7 +53,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
                 [
-                    FindPackageShare("ur_moveit_config"),
+                    FindPackageShare("setup_moveit_config"),
                     "launch",
                     "ur_moveit.launch.py",
                 ]

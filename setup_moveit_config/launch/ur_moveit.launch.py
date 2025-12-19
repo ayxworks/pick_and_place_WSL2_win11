@@ -182,11 +182,27 @@ def launch_setup(context, *args, **kwargs):
             "start_state_max_bounds_error": 0.1,
         }
     }
-    ompl_planning_yaml = load_yaml("ur_moveit_config", "config/ompl_planning.yaml")
+    ompl_planning_yaml = load_yaml(moveit_config_package.perform(context), "config/ompl_planning.yaml")
     ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
 
+    # Planning Configuration - Pilz Industrial Motion Planner
+    pilz_planning_pipeline_config = {
+        "move_group": load_yaml(
+            str(moveit_config_package.perform(context)),
+            os.path.join("config", "pilz_industrial_motion_planner_planning.yaml")
+        )
+    }
+    
+    # Pilz Cartesian Limits
+    pilz_cartesian_limits = {
+        "robot_description_planning": load_yaml(
+            str(moveit_config_package.perform(context)),
+            os.path.join("config", "pilz_cartesian_limits.yaml")
+        )
+    }
+
     # Trajectory Execution Configuration
-    controllers_yaml = load_yaml("ur_moveit_config", "config/controllers.yaml")
+    controllers_yaml = load_yaml(moveit_config_package.perform(context), "config/controllers.yaml")
     # the scaled_joint_trajectory_controller does not work on fake hardware
     change_controllers = context.perform_substitution(use_sim_time)
     if change_controllers == "true":
@@ -231,6 +247,8 @@ def launch_setup(context, *args, **kwargs):
             robot_description_kinematics,
             robot_description_planning,
             ompl_planning_pipeline_config,
+            pilz_planning_pipeline_config,
+            pilz_cartesian_limits,
             trajectory_execution,
             moveit_controllers,
             planning_scene_monitor_parameters,
@@ -254,6 +272,8 @@ def launch_setup(context, *args, **kwargs):
             robot_description,
             robot_description_semantic,
             ompl_planning_pipeline_config,
+            pilz_planning_pipeline_config,
+            pilz_cartesian_limits,
             robot_description_kinematics,
             robot_description_planning,
             warehouse_ros_config,
@@ -264,7 +284,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # Servo node for realtime control
-    servo_yaml = load_yaml("ur_moveit_config", "config/ur_servo.yaml")
+    servo_yaml = load_yaml(moveit_config_package.perform(context), "config/ur_servo.yaml")
     servo_params = {"moveit_servo": servo_yaml}
     servo_node = Node(
         package="moveit_servo",
