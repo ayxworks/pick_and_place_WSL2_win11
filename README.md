@@ -62,10 +62,6 @@ If you encounter any issues during installation, make sure:
 - You have the correct ROS distribution for this package
 - All submodules are properly initialized
 
-## License
-
-[Add license information]
-
 ## Contributors
 
 Martin Grao
