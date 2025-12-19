@@ -20,7 +20,7 @@ cd ~/ur10e_ws/src
 
 ### 2. Clone the repository
 ```bash
-git clone http://kaugitea.ikerlan.es/mgrao/ur_bringup.git
+git clone http://kaugitea.ikerlan.es/mgrao/ur_bringup.git .
 cd ..
 ```
 
