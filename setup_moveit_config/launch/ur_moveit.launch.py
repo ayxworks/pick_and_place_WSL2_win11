@@ -67,7 +67,8 @@ def launch_setup(context, *args, **kwargs):
     launch_rviz = LaunchConfiguration("launch_rviz")
     launch_servo = LaunchConfiguration("launch_servo")
     use_fake_hardware = LaunchConfiguration("use_fake_hardware")
-    gripper_comm_port = LaunchConfiguration("gripper_comm_port")
+    gripper_com_port = LaunchConfiguration("gripper_com_port")
+    robot_ip = LaunchConfiguration("robot_ip")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
@@ -88,7 +89,8 @@ def launch_setup(context, *args, **kwargs):
             " ",
             PathJoinSubstitution([FindPackageShare(description_package), "urdf", description_file]),
             " ",
-            "robot_ip:=xxx.yyy.zzz.www",
+            "robot_ip:=",
+            robot_ip,
             " ",
             "joint_limit_params:=",
             joint_limit_params,
@@ -129,8 +131,8 @@ def launch_setup(context, *args, **kwargs):
             "use_fake_hardware:=",
             use_fake_hardware,
             " ",
-            "gripper_comm_port:=",
-            gripper_comm_port,
+            "gripper_com_port:=",
+            gripper_com_port,
             " ",
         ]
     )
@@ -428,7 +430,10 @@ def generate_launch_description():
         DeclareLaunchArgument("use_fake_hardware", default_value="false", description="Use Fake Hardware?")
     )
     declared_arguments.append(
-        DeclareLaunchArgument("gripper_comm_port", default_value="/dev/ttyUSB0", description="Gripper Comm Port")
+        DeclareLaunchArgument("gripper_com_port", default_value="/tmp/ttyUR", description="Gripper Comm Port")
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument("robot_ip", description="IP of the UR")
     )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

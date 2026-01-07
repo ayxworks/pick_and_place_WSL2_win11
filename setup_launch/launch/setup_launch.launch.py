@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -22,6 +22,16 @@ def generate_launch_description():
             description="Lanzar RViz con MoveIt",
         ),
     ]
+
+    # Socat node to create /tmp/ttyUR
+    socat_node = ExecuteProcess(
+        cmd=[
+            'socat',
+            'pty,link=/tmp/ttyUR,raw,ignoreeof,waitslave',
+            'tcp:172.16.7.75:54321'
+        ],
+        output='screen'
+    )
 
     # Launch del driver del UR
     ur_control_launch = IncludeLaunchDescription(
@@ -47,7 +57,6 @@ def generate_launch_description():
         }.items(),
     )
     
-
     # Launch de MoveIt
     moveit_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -68,13 +77,14 @@ def generate_launch_description():
             "description_file": "robot.urdf.xacro",
             "moveit_config_package": "setup_moveit_config",
             "moveit_config_file": "ur.srdf.xacro",
-            "gripper_comm_port": "/tmp/ttyUR"
+            "gripper_com_port": "/tmp/ttyUR"
         }.items(),
     )
 
     return LaunchDescription(
         declared_arguments +
         [
+            socat_node,
             ur_control_launch,
             moveit_launch,
         ]
