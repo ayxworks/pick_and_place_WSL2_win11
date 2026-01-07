@@ -50,7 +50,7 @@
     output_recipe_filename="$(arg output_recipe_filename)"
     input_recipe_filename="$(arg input_recipe_filename)"
   >
-    <origin xyz="0 0 0" rpy="0 0 0" />          <!-- position robot in the world -->
+    <origin xyz="0 0 0" rpy="0 0 0" /> 
   </xacro:ur_robot>
 
   <xacro:ur_to_robotiq prefix="" parent="tool0" child="adapter_to_gripper"/>
@@ -62,7 +62,7 @@
     parent="adapter_to_gripper"
     use_fake_hardware="$(arg use_fake_hardware)"
     com_port="$(arg gripper_com_port)">
-    <origin xyz="0 0 0.01" rpy="0 0 ${pi/2}"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:robotiq_gripper>
 
   <!-- Virtual link for end effector at the fingertips -->
@@ -70,7 +70,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <sphere radius="0.001"/> <!-- invisible tiny sphere -->
+        <sphere radius="0.001"/>
       </geometry>
       <material name="transparent">
         <color rgba="0 0 0 0"/>

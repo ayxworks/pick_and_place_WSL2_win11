@@ -55,7 +55,10 @@ def generate_launch_description():
                     "description_package": "setup_description",
                     "description_file": "robot.urdf.xacro",
                     "use_tool_communication": "true",
-                    "gripper_com_port": "/tmp/ttyUR"
+                    "gripper_com_port": "/tmp/ttyUR",
+                    "reverse_ip": "172.16.7.25",
+                    "tool_voltage": "24",
+                    "tool_device_name": "/tmp/ttyUR",
                 }.items(),
             )
     
@@ -86,7 +89,7 @@ def generate_launch_description():
     return LaunchDescription(
         declared_arguments +
         [
-            # socat_node,
+            socat_node,
             ur_control_launch,
             moveit_launch,
         ]

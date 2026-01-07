@@ -210,7 +210,7 @@ def launch_setup(context, *args, **kwargs):
     }
 
     initial_joint_controllers = PathJoinSubstitution(
-        [FindPackageShare(runtime_config_package), "config", controllers_file]
+        [FindPackageShare(description_package), "config", controllers_file]
     )
 
     rviz_config_file = PathJoinSubstitution(
@@ -373,6 +373,8 @@ def launch_setup(context, *args, **kwargs):
         "force_torque_sensor_broadcaster",
         "tcp_pose_broadcaster",
         "ur_configuration_controller",
+        "robotiq_activation_controller",
+        "robotiq_gripper_controller",
     ]
     controllers_inactive = [
         "scaled_joint_trajectory_controller",
