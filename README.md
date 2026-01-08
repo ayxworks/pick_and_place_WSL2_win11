@@ -9,7 +9,7 @@ This repository contains the necessary setup for operating the UR10e robot at DI
 - Git installed
 - Robotiq Gripper URCap uninstalled from UR
 
-## Installation
+## Installation & Usage
 
 Follow these steps to set up the workspace:
 
@@ -50,11 +50,6 @@ source install/setup.bash
 ```bash
 ros2 launch setup_launch setup_launch.launch.py
 ```
-
-
-## Usage
-
-[Add specific instructions for launching and operating the UR10e robot]
 
 ## Troubleshooting
 
