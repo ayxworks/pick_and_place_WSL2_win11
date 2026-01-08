@@ -176,20 +176,22 @@ def launch_setup(context, *args, **kwargs):
         )
     }
 
-    # Planning Configuration
+    # Planning Configuration - OMPL
     ompl_planning_pipeline_config = {
-        "move_group": {
+        "planning_pipelines": ["ompl", "pilz_industrial_motion_planner"],
+        "default_planning_pipeline": "ompl",
+        "ompl": {
             "planning_plugin": "ompl_interface/OMPLPlanner",
             "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
             "start_state_max_bounds_error": 0.1,
         }
     }
     ompl_planning_yaml = load_yaml(moveit_config_package.perform(context), "config/ompl_planning.yaml")
-    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
+    ompl_planning_pipeline_config["ompl"].update(ompl_planning_yaml)
 
     # Planning Configuration - Pilz Industrial Motion Planner
     pilz_planning_pipeline_config = {
-        "move_group": load_yaml(
+        "pilz_industrial_motion_planner": load_yaml(
             str(moveit_config_package.perform(context)),
             os.path.join("config", "pilz_industrial_motion_planner_planning.yaml")
         )
@@ -249,8 +251,8 @@ def launch_setup(context, *args, **kwargs):
             robot_description_kinematics,
             robot_description_planning,
             ompl_planning_pipeline_config,
-            # pilz_planning_pipeline_config,
-            # pilz_cartesian_limits,
+            pilz_planning_pipeline_config,
+            pilz_cartesian_limits,
             trajectory_execution,
             moveit_controllers,
             planning_scene_monitor_parameters,
@@ -274,8 +276,8 @@ def launch_setup(context, *args, **kwargs):
             robot_description,
             robot_description_semantic,
             ompl_planning_pipeline_config,
-            # pilz_planning_pipeline_config,
-            # pilz_cartesian_limits,
+            pilz_planning_pipeline_config,
+            pilz_cartesian_limits,
             robot_description_kinematics,
             robot_description_planning,
             warehouse_ros_config,
