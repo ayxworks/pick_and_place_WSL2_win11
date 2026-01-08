@@ -1,0 +1,14 @@
+pick_and_place_node:
+  ros__parameters:
+    arm_move_group: "ur_manipulator"
+    gripper_move_group: "gripper"
+
+    pick_frame: "frame_pick"
+    place_frame: "frame_place"
+
+    home_position: "home"
+    observation_position: "observation"
+    gripper_open_position: "open"
+    gripper_closed_position: "closed"
+
+    detect_service_name: "detect_object"
