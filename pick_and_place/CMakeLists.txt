@@ -32,6 +32,16 @@ ament_target_dependencies(pick_and_place_node
   moveit_msgs
 )
 
+install(
+  TARGETS pick_and_place_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

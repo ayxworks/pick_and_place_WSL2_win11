@@ -14,6 +14,7 @@ public:
         : Node("pick_and_place_node", rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)),
           tf_buffer_(this->get_clock()),
           tf_listener_(tf_buffer_)
+          
     {
         // Leer parámetros de move groups y frames
         arm_move_group_ = this->get_parameter("arm_move_group").as_string();
@@ -29,10 +30,6 @@ public:
         
         // Leer nombre del servicio de detección
         detect_service_name_ = this->get_parameter("detect_service_name").as_string();
-
-        // Inicializar MoveIt C++ interfaces
-        arm_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(shared_from_this(), arm_move_group_);
-        gripper_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(shared_from_this(), gripper_move_group_);
         
         // Crear cliente del servicio de detección
         detect_client_ = this->create_client<std_srvs::srv::Trigger>(detect_service_name_);
@@ -45,6 +42,18 @@ public:
         RCLCPP_INFO(this->get_logger(), "Gripper open: %s, closed: %s", gripper_open_position_.c_str(), gripper_closed_position_.c_str());
         RCLCPP_INFO(this->get_logger(), "Servicio de detección: %s", detect_service_name_.c_str());
     }
+
+    void init_moveit()
+    {
+        arm_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
+            shared_from_this(), arm_move_group_);
+
+        gripper_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
+            shared_from_this(), gripper_move_group_);
+
+        RCLCPP_INFO(this->get_logger(), "MoveIt interfaces inicializadas");
+    }
+
 
     bool call_detect_service()
     {
@@ -173,6 +182,7 @@ public:
 
     bool move_to_pose(const geometry_msgs::msg::PoseStamped &pose)
     {
+        set_ompl_planner();
         arm_->setPoseTarget(pose);
         moveit::planning_interface::MoveGroupInterface::Plan plan;
         bool success = (arm_->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
@@ -205,46 +215,122 @@ public:
         return success;
     }
 
+    bool move_relative_to_frame(const geometry_msgs::msg::PoseStamped &current_pose,
+                                const tf2::Vector3 &offset_in_frame)
+    {
+        tf2::Transform tf_world_current;
+        tf2::fromMsg(current_pose.pose, tf_world_current);
+
+        tf2::Transform tf_offset;
+        tf_offset.setIdentity();
+        tf_offset.setOrigin(offset_in_frame);
+
+        tf2::Transform tf_world_target = tf_world_current * tf_offset;
+
+        geometry_msgs::msg::PoseStamped target_pose = current_pose;
+
+        geometry_msgs::msg::Pose target_pose_msg;
+        tf2::toMsg(tf_world_target, target_pose_msg);
+        target_pose.pose = target_pose_msg;
+
+        return move_to_pose(target_pose);
+    }
+
+
+    bool move_lin_to_pose(const geometry_msgs::msg::PoseStamped &pose)
+    {
+        set_pilz_lin_planner();
+
+        arm_->setPoseTarget(pose);
+        moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+        bool success = (arm_->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
+        if (success)
+        {
+            arm_->execute(plan);
+        }
+        else
+        {
+            RCLCPP_ERROR(this->get_logger(), "PILZ LIN falló");
+        }
+
+        arm_->clearPoseTargets();
+        return success;
+    }
+
+    bool move_lin_relative_to_frame(const geometry_msgs::msg::PoseStamped &current_pose,
+                                    const tf2::Vector3 &offset)
+    {
+        tf2::Transform tf_world_current;
+        tf2::fromMsg(current_pose.pose, tf_world_current);
+
+        tf2::Transform tf_offset;
+        tf_offset.setIdentity();
+        tf_offset.setOrigin(offset);
+
+        tf2::Transform tf_world_target = tf_world_current * tf_offset;
+
+        geometry_msgs::msg::PoseStamped target_pose = current_pose;
+
+        geometry_msgs::msg::Pose target_pose_msg;
+        tf2::toMsg(tf_world_target, target_pose_msg);
+        target_pose.pose = target_pose_msg;
+
+        return move_lin_to_pose(target_pose);
+    }
+
     void pick(const std::string &target_frame)
     {
-        geometry_msgs::msg::PoseStamped pose = get_frame_pose(target_frame);
+        geometry_msgs::msg::PoseStamped pick_pose = get_frame_pose(target_frame);
         RCLCPP_INFO(this->get_logger(), "Moviendo al frame %s", target_frame.c_str());
-        move_to_pose(pose);
+        move_to_pose(pick_pose);
 
         // Mover 10 cm en Z del gripper
-        pose.pose.position.z += 0.10;
         RCLCPP_INFO(this->get_logger(), "Moviendo 10cm en Z del gripper");
-        move_to_pose(pose);
+        move_lin_relative_to_frame(pick_pose, tf2::Vector3(0.0, 0.0, 0.10));
 
         // Cerrar gripper
         RCLCPP_INFO(this->get_logger(), "Cerrando gripper");
         move_gripper(gripper_closed_position_);
 
         // Volver a la pose pick
-        pose.pose.position.z -= 0.10;
         RCLCPP_INFO(this->get_logger(), "Volviendo a la pose pick");
-        move_to_pose(pose);
+        move_lin_to_pose(pick_pose);
 
         // Subir 10 cm en Z del world
-        pose.pose.position.z += 0.10;
+        geometry_msgs::msg::PoseStamped lift_pose = pick_pose;
+        lift_pose.pose.position.z += 0.10;
         RCLCPP_INFO(this->get_logger(), "Subiendo 10cm en Z world");
-        move_to_pose(pose);
+        move_lin_to_pose(lift_pose);
     }
 
     void place(const std::string &target_frame)
     {
-        geometry_msgs::msg::PoseStamped pose = get_frame_pose(target_frame);
+        geometry_msgs::msg::PoseStamped place_pose = get_frame_pose(target_frame);
+        geometry_msgs::msg::PoseStamped place_pre_pose = place_pose;
+        place_pre_pose.pose.position.z += 0.10;
         RCLCPP_INFO(this->get_logger(), "Moviendo al frame %s", target_frame.c_str());
-        move_to_pose(pose);
+        move_to_pose(place_pre_pose);
 
         // Bajar 10 cm en Z de world
-        pose.pose.position.z -= 0.10;
         RCLCPP_INFO(this->get_logger(), "Bajando 10cm en Z world");
-        move_to_pose(pose);
+        move_lin_to_pose(place_pose);
 
         // Abrir gripper
         RCLCPP_INFO(this->get_logger(), "Abriendo gripper");
         move_gripper(gripper_open_position_);
+    }
+
+    void set_ompl_planner()
+    {
+        arm_->setPlanningPipelineId("ompl");
+        arm_->setPlannerId("RRTConnectkConfigDefault");
+    }
+
+    void set_pilz_lin_planner()
+    {
+        arm_->setPlanningPipelineId("pilz_industrial_motion_planner");
+        arm_->setPlannerId("LIN");
     }
 
 private:
@@ -269,6 +355,8 @@ int main(int argc, char **argv)
     rclcpp::init(argc, argv);
 
     auto node = std::make_shared<PickAndPlaceNode>();
+
+    node->init_moveit();
     
     // Ejecutar la secuencia pick and place
     node->execute_pick_and_place();
