@@ -23,17 +23,6 @@ def generate_launch_description():
         ),
     ]
 
-    # Socat node to create /tmp/ttyUR
-    socat_node = ExecuteProcess(
-        cmd=[
-            'socat',
-            'pty,link=/tmp/ttyUR,raw,ignoreeof,waitslave',
-            'tcp:172.16.7.75:54321'
-        ],
-        output='screen'
-    )
-    
-
     # Launch del driver del UR
     ur_control_launch = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -56,8 +45,12 @@ def generate_launch_description():
                     "description_file": "robot.urdf.xacro",
                     "use_tool_communication": "true",
                     "gripper_com_port": "/tmp/ttyUR",
-                    "reverse_ip": "172.16.7.25",
                     "tool_voltage": "24",
+                    "tool_parity": "0",
+                    "tool_baud_rate": "115200",
+                    "tool_stop_bits": "1",
+                    "tool_rx_idle_chars": "1.5",
+                    "tool_tx_idle_chars": "3.5",
                     "tool_device_name": "/tmp/ttyUR",
                 }.items(),
             )
@@ -89,7 +82,6 @@ def generate_launch_description():
     return LaunchDescription(
         declared_arguments +
         [
-            socat_node,
             ur_control_launch,
             moveit_launch,
         ]

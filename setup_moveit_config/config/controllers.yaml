@@ -30,6 +30,8 @@ joint_trajectory_controller:
     - wrist_3_joint
 
 robotiq_gripper_controller:
-  type: position_controllers/GripperActionController
+  action_ns: gripper_cmd
+  type: GripperCommand
+  default: false
   joints:
     - finger_joint
