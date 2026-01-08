@@ -7,6 +7,7 @@ This repository contains the necessary setup for operating the UR10e robot at DI
 - ROS 2 Humble installed on your system
 - Basic knowledge of ROS workspaces
 - Git installed
+- Robotiq Gripper URCap uninstalled from UR
 
 ## Installation
 
@@ -61,7 +62,9 @@ If you encounter any issues during installation, make sure:
 - All ROS dependencies are properly installed
 - You have the correct ROS distribution for this package
 - All submodules are properly initialized
+- Robotiq Grippers URCap is uninstalled from the UR
+- Kill all ROS 2 and Python zombie nodes
 
 ## Contributors
 
-Martin Grao
+Martin Grao & Ander Gonzalez
