@@ -8,19 +8,13 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
 
     robot_ip = LaunchConfiguration("robot_ip")
-    use_rviz = LaunchConfiguration("use_rviz")
 
     declared_arguments = [
         DeclareLaunchArgument(
             "robot_ip",
             default_value="172.16.7.75",
             description="IP del robot UR10e",
-        ),
-        DeclareLaunchArgument(
-            "use_rviz",
-            default_value="true",
-            description="Lanzar RViz con MoveIt",
-        ),
+        )
     ]
 
     # Launch del driver del UR
@@ -68,8 +62,7 @@ def generate_launch_description():
                 ),
                 launch_arguments={
                     "ur_type": "ur10e",
-                    "use_rviz": use_rviz,
-                    "launch_rviz": use_rviz,
+                    "launch_rviz": "true",
                     "robot_ip": robot_ip,
                     "description_package": "setup_description",
                     "description_file": "robot.urdf.xacro",
