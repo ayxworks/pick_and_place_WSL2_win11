@@ -1,14 +1,48 @@
 pick_and_place_node:
   ros__parameters:
+    # Name of the MoveIt planning group for the robotic arm
     arm_move_group: "ur_manipulator"
+
+    # Name of the MoveIt planning group for the gripper/end-effector
     gripper_move_group: "gripper"
 
-    pick_frame: "frame_pick"
-    place_frame: "frame_place"
+    # TF frame that defines the pre-approach position for picking
+    # The robot will move to this frame before performing the final approach
+    pre_pick_frame: "frame_pick"
 
+    # TF frame that defines the pre-approach position for placing
+    # The robot will move to this frame before depositing the object
+    pre_place_frame: "frame_place"
+
+    # Name of the joint configuration saved in MoveIt for the home/rest position
     home_position: "home"
+
+    # Name of the joint configuration for the observation position
+    # Where the robot positions itself before calling the detection service
     observation_position: "observation"
+
+    # Name of the gripper joint configuration in open position
     gripper_open_position: "open"
+
+    # Name of the gripper joint configuration in closed position (grasping object)
     gripper_closed_position: "closed"
 
+    # Name of the ROS object detection service (type std_srvs/Trigger)
+    # Called from the observation position to update the pick/place frames
     detect_service_name: "detect_object"
+
+    # Distance (in meters) for the final approach movement along the gripper's Z-axis
+    # Linear motion from pre_pick_frame toward the object
+    pick_approach_distance_: 0.10
+
+    # Distance (in meters) for the retreat movement along the gripper's Z-axis after placing
+    # Linear motion after opening the gripper at the place position
+    place_leave_distance_: 0.10
+
+    # Distance (in meters) to lift the object vertically after grasping
+    # Movement along the world's Z-axis after closing the gripper
+    lift_distance: 0.10
+
+    # Distance (in meters) to lower the object before releasing it
+    # Movement along the world's Z-axis before opening the gripper (if implemented)
+    drop_distance: 0.10
