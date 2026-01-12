@@ -20,8 +20,8 @@ public:
         // Read MoveIt group names and TF frames from parameters
         arm_move_group_ = this->get_parameter("arm_move_group").as_string();
         gripper_move_group_ = this->get_parameter("gripper_move_group").as_string();
-        pre_pick_frame_ = this->get_parameter("pick_frame").as_string();
-        pre_place_frame_ = this->get_parameter("place_frame").as_string();
+        pre_pick_frame_ = this->get_parameter("pre_pick_frame_").as_string();
+        pre_place_frame_ = this->get_parameter("pre_place_frame_").as_string();
 
         // Read named joint targets
         home_position_ = this->get_parameter("home_position").as_string();
