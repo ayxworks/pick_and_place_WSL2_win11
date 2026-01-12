@@ -26,7 +26,6 @@ cd ..
 ```
 
 ### 3. Import dependencies
-
 Use `vcs` to import all required dependencies from the `dependencies.repos` file:
 ```bash
 vcs import src < src/<repository-name>/dependencies.repos
@@ -46,10 +45,14 @@ colcon build
 ```bash
 source install/setup.bash
 ```
+
 ### 7. Launch the bringup file
 ```bash
 ros2 launch setup_launch setup_launch.launch.py
 ```
+
+### 8. Play External Control program from the UR Teach Pendant
+
 
 ## Troubleshooting
 
