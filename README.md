@@ -7,6 +7,7 @@ This repository contains the necessary setup for operating the UR10e robot at DI
 - ROS 2 Humble installed on your system
 - Basic knowledge of ROS workspaces
 - Git installed
+- RealSense SDK installed [instructions] (https://github.com/realsenseai/librealsense/blob/master/doc/distribution_linux.md#installing-the-packages)
 - Robotiq Gripper URCap uninstalled from UR
 
 ## Installation & Usage

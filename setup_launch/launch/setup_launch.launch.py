@@ -71,11 +71,38 @@ def generate_launch_description():
                     "gripper_com_port": "/tmp/ttyUR"
                 }.items(),
             )
+    
+    # Launch de RealSense D435
+    realsense_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("realsense2_camera"),
+                    "launch",
+                    "rs_launch.py",
+                ]
+            )
+        ),
+        launch_arguments={
+            "camera_name": "camera",
+            "camera_namespace": "camera",
+            "enable_color": "true",
+            "enable_depth": "true",
+            "enable_infra1": "false",
+            "enable_infra2": "false",
+            "depth_module.profile": "640x480x30",
+            "rgb_camera.profile": "640x480x30",
+            "align_depth.enable": "true",
+            "pointcloud.enable": "true",
+            "publish_tf": "true",
+        }.items(),
+    )
 
     return LaunchDescription(
         declared_arguments +
         [
             ur_control_launch,
             moveit_launch,
+            realsense_launch
         ]
     )

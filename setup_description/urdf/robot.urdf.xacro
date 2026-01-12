@@ -8,6 +8,7 @@
   
   <xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_140_macro.urdf.xacro" />
   <xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro" />
+  <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
   
   <xacro:arg name="ur_type" default="ur10e"/>
   
@@ -34,6 +35,10 @@
   <xacro:arg name="tool_stop_bits" default="1" />
   <xacro:arg name="tool_rx_idle_chars" default="1.5"/>
   <xacro:arg name="tool_tx_idle_chars" default="3.5" />
+  <xacro:arg name="use_nominal_extrinsics" default="false"/>
+  <xacro:arg name="add_plug" default="false" />
+  <xacro:arg name="use_mesh" default="true" />
+  
   
   <!-- create link fixed to the "world" -->
   <link name="world" />
@@ -95,5 +100,11 @@
     <child link="ee_link"/>
     <origin xyz="0 0 0.22" rpy="0 0 0"/>
   </joint>
+
+  <!-- Realsense D435 Camera -->
+
+  <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
+    <origin xyz="0 0 1.0" rpy="0 0 0"/>
+  </xacro:sensor_d435>
 
 </robot>

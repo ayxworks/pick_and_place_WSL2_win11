@@ -1,0 +1,22 @@
+services:
+  pick_and_place:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pick_and_place
+    container_name: pick_and_place
+    network_mode: host
+    stdin_open: true
+    tty: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - ROS_DOMAIN_ID=0
+    volumes:
+      # Solo necesario si usas GUI (RViz, rqt, etc.)
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    command: >
+      bash -c "
+      source /opt/ros/humble/setup.bash &&
+      source /ros2_ws/install/setup.bash &&
+      ros2 launch setup_launch setup_launch.launch.py
+      "

@@ -7,6 +7,8 @@
   <maintainer email="mgrao@ikerlan.es">mgrao</maintainer>
   <license>TODO: License declaration</license>
 
+  <depend>realsense2_camera</depend>
+
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>ur_robot_driver</exec_depend>
