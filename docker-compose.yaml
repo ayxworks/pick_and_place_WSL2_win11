@@ -8,12 +8,15 @@ services:
     network_mode: host
     stdin_open: true
     tty: true
+    privileged: true
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
     environment:
       - DISPLAY=${DISPLAY}
       - ROS_DOMAIN_ID=0
     volumes:
-      # Solo necesario si usas GUI (RViz, rqt, etc.)
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev:/dev
     command: >
       bash -c "
       source /opt/ros/humble/setup.bash &&

@@ -103,6 +103,6 @@ def generate_launch_description():
         [
             ur_control_launch,
             moveit_launch,
-            realsense_launch
+            # realsense_launch
         ]
     )
