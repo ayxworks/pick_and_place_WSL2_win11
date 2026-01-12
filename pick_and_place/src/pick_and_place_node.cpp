@@ -315,17 +315,20 @@ public:
         RCLCPP_INFO(this->get_logger(), "Closing gripper");
         if (!move_gripper(gripper_closed_position_)) return false;
 
-        // Relative movement in Z direction of the WORLD to lift the object
+        // Lift object - movement in Z direction of WORLD frame
+        RCLCPP_INFO(this->get_logger(), "Lifting object (%.3f m in world Z)", lift_distance_);
 
-        // Obtain the actual pose of the end-effector
+        // Get current end-effector pose in world frame
         geometry_msgs::msg::PoseStamped current_pose;
-        current_pose.header.frame_id = arm_->getPlanningFrame();
-        current_pose.pose = arm_->getCurrentPose().pose;
+        if (!get_frame_pose(arm_->getEndEffectorLink(), current_pose, "world"))
+            return false;
 
+        // Create lift pose by adding to Z in world frame
         geometry_msgs::msg::PoseStamped lift_pose = current_pose;
         lift_pose.pose.position.z += lift_distance_;
 
         if (!move_lin_to_pose(lift_pose)) return false;
+        
         return true;
     }
 
