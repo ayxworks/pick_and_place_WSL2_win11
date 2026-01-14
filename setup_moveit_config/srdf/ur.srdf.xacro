@@ -5,9 +5,10 @@
   <xacro:arg name="name" default="ur"/>
   <!-- parameters -->
   <xacro:arg name="prefix" default="" />
+  <xacro:arg name="use_cam_flange_support" default="false"/>
 
   <xacro:include filename="$(find setup_moveit_config)/srdf/ur_macro.srdf.xacro"/>
 
-  <xacro:ur_srdf name="$(arg name)" prefix="$(arg prefix)"/>
+  <xacro:ur_srdf name="$(arg name)" prefix="$(arg prefix)" use_cam_flange_support="$(arg use_cam_flange_support)"/>
 
 </robot>

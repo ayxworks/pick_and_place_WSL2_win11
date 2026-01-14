@@ -11,6 +11,7 @@ def launch_setup(context, *args, **kwargs):
     robot_ip = LaunchConfiguration("robot_ip")
     use_sim = LaunchConfiguration("use_sim", default="false")
     controllers_file = LaunchConfiguration("controllers_file", default="ur_controllers.yaml")
+    use_cam_flange_support = LaunchConfiguration("use_cam_flange_support", default="false")
 
     if use_sim.perform(context) == "true":
         controllers_file = str(controllers_file.perform(context)).replace(".yaml", "_gazebo.yaml")
@@ -46,6 +47,7 @@ def launch_setup(context, *args, **kwargs):
                     "tool_device_name": "/tmp/ttyUR",
                     "use_sim": use_sim,
                     "controllers_file": controllers_file,
+                    "use_cam_flange_support": use_cam_flange_support,
                 }.items(),
             )
     
@@ -70,6 +72,7 @@ def launch_setup(context, *args, **kwargs):
                     "moveit_config_file": "ur.srdf.xacro",
                     "gripper_com_port": "/tmp/ttyUR",
                     "use_sim_time": use_sim,
+                    "use_cam_flange_support": use_cam_flange_support,
                 }.items(),
             )
     
@@ -106,6 +109,14 @@ def generate_launch_description():
             default_value="ur_controllers.yaml",
             description="YAML file with the controllers configuration.",
         )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_cam_flange_support',
+            default_value='false',
+            description='Whether to include cam flange support.',
+            choices=["true", "false"],
+        ),
     )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

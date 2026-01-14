@@ -69,6 +69,7 @@ def launch_setup(context, *args, **kwargs):
     use_fake_hardware = LaunchConfiguration("use_fake_hardware")
     gripper_com_port = LaunchConfiguration("gripper_com_port")
     robot_ip = LaunchConfiguration("robot_ip")
+    use_cam_flange_support = LaunchConfiguration("use_cam_flange_support", default="false")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
@@ -137,6 +138,9 @@ def launch_setup(context, *args, **kwargs):
             'use_sim:=',
             use_sim_time,
             ' ',
+            ' ',
+            'use_cam_flange_support:=',
+            use_cam_flange_support,
         ]
     )
     robot_description = {
@@ -160,6 +164,9 @@ def launch_setup(context, *args, **kwargs):
             "prefix:=",
             prefix,
             " ",
+            ' ',
+            'use_cam_flange_support:=',
+            use_cam_flange_support,
         ]
     )
     robot_description_semantic = {"robot_description_semantic": robot_description_semantic_content}
@@ -443,6 +450,14 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument("robot_ip", description="IP of the UR")
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_cam_flange_support',
+            default_value='false',
+            description='Whether to include cam flange support.',
+            choices=["true", "false"],
+        ),
     )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

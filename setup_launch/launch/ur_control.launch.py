@@ -92,6 +92,7 @@ def launch_setup(context, *args, **kwargs):
     trajectory_port = LaunchConfiguration("trajectory_port")
     gripper_com_port = LaunchConfiguration("gripper_com_port")
     use_sim = LaunchConfiguration("use_sim", default="false")
+    use_cam_flange_support = LaunchConfiguration("use_cam_flange_support", default="false")
 
     if use_sim.perform(context) == "true":
         use_sim_time= True
@@ -221,6 +222,9 @@ def launch_setup(context, *args, **kwargs):
             ' ',
             'controllers_file:=',
             os.path.join(controllers_folder, controllers_file.perform(context)),
+            ' ',
+            'use_cam_flange_support:=',
+            use_cam_flange_support,
         ]
     )
     robot_description = {
@@ -752,4 +756,13 @@ def generate_launch_description():
             choices=["true", "false"],
         ),
     )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_cam_flange_support',
+            default_value='false',
+            description='Whether to include cam flange support.',
+            choices=["true", "false"],
+        ),
+    )
+    
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
