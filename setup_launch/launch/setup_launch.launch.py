@@ -1,21 +1,19 @@
+import os
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess, TimerAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess, TimerAction, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
-
-def generate_launch_description():
-
+def launch_setup(context, *args, **kwargs):
+    
     robot_ip = LaunchConfiguration("robot_ip")
+    use_sim = LaunchConfiguration("use_sim", default="false")
+    controllers_file = LaunchConfiguration("controllers_file", default="ur_controllers.yaml")
 
-    declared_arguments = [
-        DeclareLaunchArgument(
-            "robot_ip",
-            default_value="172.16.7.75",
-            description="IP del robot UR10e",
-        )
-    ]
+    if use_sim.perform(context) == "true":
+        controllers_file = str(controllers_file.perform(context)).replace(".yaml", "_gazebo.yaml")
 
     # Launch del driver del UR
     ur_control_launch = IncludeLaunchDescription(
@@ -46,6 +44,8 @@ def generate_launch_description():
                     "tool_rx_idle_chars": "1.5",
                     "tool_tx_idle_chars": "3.5",
                     "tool_device_name": "/tmp/ttyUR",
+                    "use_sim": use_sim,
+                    "controllers_file": controllers_file,
                 }.items(),
             )
     
@@ -68,14 +68,44 @@ def generate_launch_description():
                     "description_file": "robot.urdf.xacro",
                     "moveit_config_package": "setup_moveit_config",
                     "moveit_config_file": "ur.srdf.xacro",
-                    "gripper_com_port": "/tmp/ttyUR"
+                    "gripper_com_port": "/tmp/ttyUR",
+                    "use_sim_time": use_sim,
                 }.items(),
             )
+    
+    nodes = [
+        ur_control_launch, 
+        moveit_launch,
+    ]
+    
+    return nodes
 
-    return LaunchDescription(
-        declared_arguments +
-        [
-            ur_control_launch,
-            moveit_launch,
-        ]
+def generate_launch_description():
+
+    
+    declared_arguments = []
+    
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_ip",
+            default_value="172.16.7.75",
+            description="IP del robot UR10e",
+        )
     )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_sim',
+            default_value='false',
+            description='Start robot in Gazebo Ignition simulation.',
+            choices=["true", "false"],
+        ),
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "controllers_file",
+            default_value="ur_controllers.yaml",
+            description="YAML file with the controllers configuration.",
+        )
+    )
+
+    return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

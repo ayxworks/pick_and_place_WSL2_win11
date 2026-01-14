@@ -134,6 +134,9 @@ def launch_setup(context, *args, **kwargs):
             "gripper_com_port:=",
             gripper_com_port,
             " ",
+            'use_sim:=',
+            use_sim_time,
+            ' ',
         ]
     )
     robot_description = {
@@ -302,7 +305,11 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
     )
 
-    nodes_to_start = [move_group_node, rviz_node, servo_node]
+    nodes_to_start = [
+        move_group_node, 
+        rviz_node, 
+        servo_node,
+    ]
 
     return nodes_to_start
 

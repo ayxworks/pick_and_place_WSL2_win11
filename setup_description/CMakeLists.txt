@@ -14,6 +14,7 @@ install(
     urdf
     launch
     config
+    gazebo
   DESTINATION share/${PROJECT_NAME}
 )
 

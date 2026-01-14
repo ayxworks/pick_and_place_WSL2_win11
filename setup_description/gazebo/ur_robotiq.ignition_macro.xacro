@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="ur_robotiq_ignition_macro"
+    params="
+      runtime_config_package 
+      path_to_yaml 
+      namespace 
+      prefix">
+
+    <!-- ros_control gazebo plugin -->
+    <gazebo>
+      <plugin filename="libign_ros2_control-system.so" name="ign_ros2_control::IgnitionROS2ControlPlugin">
+        <xacro:if value="${namespace != '/'}">
+          <ros>
+            <namespace>/${namespace[:-1]}</namespace>
+          </ros>
+          <robot_param_node>/${namespace}robot_state_publisher</robot_param_node>
+        </xacro:if>
+        <parameters>$(find ${runtime_config_package})/${path_to_yaml}</parameters>
+      </plugin>
+    </gazebo>
+    
+  </xacro:macro>
+</robot>

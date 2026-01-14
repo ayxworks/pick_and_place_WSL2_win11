@@ -29,17 +29,20 @@
 #
 # Author: Denis Stogl
 
-from launch_ros.actions import Node
+import os
+
+from launch_ros.actions import Node, SetParameter
 from launch_ros.parameter_descriptions import ParameterFile, ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, IncludeLaunchDescription, RegisterEventHandler, TimerAction
 from launch.event_handlers import OnProcessStart
-from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.launch_description_sources import AnyLaunchDescriptionSource, PythonLaunchDescriptionSource
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import (
     AndSubstitution,
+    OrSubstitution,
     Command,
     FindExecutable,
     LaunchConfiguration,
@@ -49,6 +52,9 @@ from launch.substitutions import (
 
 
 def launch_setup(context, *args, **kwargs):
+    
+    controllers_folder = "config"
+    
     # Initialize Arguments
     ur_type = LaunchConfiguration("ur_type")
     robot_ip = LaunchConfiguration("robot_ip")
@@ -85,15 +91,21 @@ def launch_setup(context, *args, **kwargs):
     script_sender_port = LaunchConfiguration("script_sender_port")
     trajectory_port = LaunchConfiguration("trajectory_port")
     gripper_com_port = LaunchConfiguration("gripper_com_port")
+    use_sim = LaunchConfiguration("use_sim", default="false")
+
+    if use_sim.perform(context) == "true":
+        use_sim_time= True
+    else:
+        use_sim_time = False
 
     joint_limit_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
+        [FindPackageShare(description_package), controllers_folder, ur_type, "joint_limits.yaml"]
     )
     physical_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "physical_parameters.yaml"]
+        [FindPackageShare(description_package), controllers_folder, ur_type, "physical_parameters.yaml"]
     )
     visual_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "visual_parameters.yaml"]
+        [FindPackageShare(description_package), controllers_folder, ur_type, "visual_parameters.yaml"]
     )
     script_filename = PathJoinSubstitution(
         [FindPackageShare("ur_client_library"), "resources", "external_control.urscript"]
@@ -203,6 +215,12 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "gripper_com_port:=",
             gripper_com_port,
+            ' ',
+            'use_sim:=',
+            use_sim,
+            ' ',
+            'controllers_file:=',
+            os.path.join(controllers_folder, controllers_file.perform(context)),
         ]
     )
     robot_description = {
@@ -210,7 +228,7 @@ def launch_setup(context, *args, **kwargs):
     }
 
     initial_joint_controllers = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", controllers_file]
+        [FindPackageShare(description_package), controllers_folder, controllers_file]
     )
 
     rviz_config_file = PathJoinSubstitution(
@@ -226,18 +244,6 @@ def launch_setup(context, *args, **kwargs):
         ]
     )
 
-    control_node = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        parameters=[
-            robot_description,
-            update_rate_config_file,
-            ParameterFile(initial_joint_controllers, allow_substs=True),
-        ],
-        output="screen",
-        condition=IfCondition(use_fake_hardware),
-    )
-
     ur_control_node = Node(
         package="ur_robot_driver",
         executable="ur_ros2_control_node",
@@ -247,12 +253,12 @@ def launch_setup(context, *args, **kwargs):
             ParameterFile(initial_joint_controllers, allow_substs=True),
         ],
         output="screen",
-        condition=UnlessCondition(use_fake_hardware),
+        condition=UnlessCondition(OrSubstitution(use_fake_hardware, use_sim)),
     )
 
     dashboard_client_node = IncludeLaunchDescription(
         condition=IfCondition(
-            AndSubstitution(launch_dashboard_client, NotSubstitution(use_fake_hardware))
+            AndSubstitution(launch_dashboard_client, NotSubstitution(OrSubstitution(use_fake_hardware, use_sim)))
         ),
         launch_description_source=AnyLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -269,7 +275,7 @@ def launch_setup(context, *args, **kwargs):
         executable="robot_state_helper",
         name="ur_robot_state_helper",
         output="screen",
-        condition=UnlessCondition(use_fake_hardware),
+        condition=UnlessCondition(OrSubstitution(use_fake_hardware, use_sim)),
         parameters=[
             {"headless_mode": headless_mode},
             {"robot_ip": robot_ip},
@@ -278,7 +284,11 @@ def launch_setup(context, *args, **kwargs):
 
     tool_communication_node = Node(
         package="ur_robot_driver",
-        condition=IfCondition(use_tool_communication),
+        condition=IfCondition(
+                    AndSubstitution(
+                        use_tool_communication, 
+                        NotSubstitution(OrSubstitution(use_fake_hardware, use_sim)),
+                    )),
         executable="tool_communication.py",
         name="ur_tool_comm",
         output="screen",
@@ -296,6 +306,7 @@ def launch_setup(context, *args, **kwargs):
         executable="urscript_interface",
         parameters=[{"robot_ip": robot_ip}],
         output="screen",
+        condition=UnlessCondition(OrSubstitution(use_fake_hardware, use_sim)),
     )
 
     controller_stopper_node = Node(
@@ -304,7 +315,7 @@ def launch_setup(context, *args, **kwargs):
         name="controller_stopper",
         output="screen",
         emulate_tty=True,
-        condition=UnlessCondition(use_fake_hardware),
+        condition=UnlessCondition(OrSubstitution(use_fake_hardware, use_sim)),
         parameters=[
             {"headless_mode": headless_mode},
             {"joint_controller_active": activate_joint_controller},
@@ -327,6 +338,17 @@ def launch_setup(context, *args, **kwargs):
         output="both",
         parameters=[robot_description],
     )
+    
+    gazebo_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('setup_launch'),
+                'launch',
+                'gazebo_simulation.launch.py'
+                ]),
+            ]),
+        condition = IfCondition(use_sim),
+    )
 
     rviz_node = Node(
         package="rviz2",
@@ -342,6 +364,7 @@ def launch_setup(context, *args, **kwargs):
         executable="trajectory_until_node",
         name="trajectory_until_node",
         output="screen",
+        condition=UnlessCondition(OrSubstitution(use_fake_hardware, use_sim)),
         parameters=[
             {
                 "motion_controller_uri": f"/{initial_joint_controller.perform(context)}/follow_joint_trajectory",
@@ -351,7 +374,8 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # Spawn controllers
-    def controller_spawner(controllers, active=True):
+    def controller_spawner(controllers:list[str], active:bool=True, use_sim_time:bool=False):
+        
         inactive_flags = ["--inactive"] if not active else []
         return Node(
             package="controller_manager",
@@ -364,9 +388,10 @@ def launch_setup(context, *args, **kwargs):
             ]
             + inactive_flags
             + controllers,
+            parameters=[{'use_sim_time': use_sim_time}],
         )
 
-    controllers_active = [
+    controllers_active_realRobot = [
         "joint_state_broadcaster",
         "io_and_status_controller",
         "speed_scaling_state_broadcaster",
@@ -376,7 +401,7 @@ def launch_setup(context, *args, **kwargs):
         "robotiq_activation_controller",
         "robotiq_gripper_controller",
     ]
-    controllers_inactive = [
+    controllers_inactive_realRobot = [
         "scaled_joint_trajectory_controller",
         "joint_trajectory_controller",
         "forward_velocity_controller",
@@ -387,17 +412,31 @@ def launch_setup(context, *args, **kwargs):
         "freedrive_mode_controller",
         "tool_contact_controller",
     ]
-    if activate_joint_controller.perform(context) == "true":
-        controllers_active.append(initial_joint_controller.perform(context))
-        controllers_inactive.remove(initial_joint_controller.perform(context))
-
-    if use_fake_hardware.perform(context) == "true":
-        controllers_active.remove("tcp_pose_broadcaster")
-
-    controller_spawners = [
-        controller_spawner(controllers_active),
-        controller_spawner(controllers_inactive, active=False),
+    controllers_active_gazeboRobot = [
+        "joint_state_broadcaster",
+        "joint_trajectory_controller",
+        "robotiq_gripper_controller",
     ]
+    
+    if use_sim_time or (use_fake_hardware.perform(context) == "true"):
+        controllers_active = controllers_active_gazeboRobot
+    else:
+        controllers_active = controllers_active_realRobot
+        controllers_inactive = controllers_inactive_realRobot
+        
+        if activate_joint_controller.perform(context) == "true":
+            controllers_active.append(initial_joint_controller.perform(context))
+            controllers_inactive.remove(initial_joint_controller.perform(context))
+        
+    if use_sim_time:
+        controller_spawners = [
+            controller_spawner(controllers_active, use_sim_time=use_sim_time),
+        ]
+    else:
+        controller_spawners = [
+            controller_spawner(controllers_active, use_sim_time=use_sim_time),
+            controller_spawner(controllers_inactive, active=False, use_sim_time=use_sim_time),
+        ]
 
     ur_control_with_delay = RegisterEventHandler(
         event_handler=OnProcessStart(
@@ -412,18 +451,19 @@ def launch_setup(context, *args, **kwargs):
     )
 
     nodes_to_start = [
-        control_node,
-        # ur_control_node,
-        dashboard_client_node,
-        robot_state_helper_node,
-        tool_communication_node,
-        ur_control_with_delay,
-        controller_stopper_node,
-        urscript_interface,
-        robot_state_publisher_node,
-        rviz_node,
-        trajectory_until_node,
-    ] + controller_spawners
+        SetParameter(name="use_sim_time", value=use_sim_time),
+        # ur_control_node,          # UnlessCondition(OrSubstitution(use_fake_hardware, use_sim))
+        dashboard_client_node,      # IfCondition(AndSubstitution(launch_dashboard_client, NotSubstitution(OrSubstitution(use_fake_hardware, use_sim)))
+        robot_state_helper_node,    # UnlessCondition(OrSubstitution(use_fake_hardware, use_sim))
+        tool_communication_node,    # IfCondition(AndSubstitution(use_tool_communication, NotSubstitution(OrSubstitution(use_fake_hardware, use_sim))))
+        ur_control_with_delay,      # delayed ur_control_node (after tool_communication_node)
+        controller_stopper_node,    # UnlessCondition(OrSubstitution(use_fake_hardware, use_sim))
+        urscript_interface,         # UnlessCondition(OrSubstitution(use_fake_hardware, use_sim))
+        robot_state_publisher_node, # Always
+        gazebo_node,                # IfCondition(use_sim)
+        rviz_node,                  # IfCondition(launch_rviz)
+        trajectory_until_node,      # UnlessCondition(OrSubstitution(use_fake_hardware, use_sim))
+    ] + controller_spawners         # Always
 
     return nodes_to_start
 
@@ -703,5 +743,13 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument("gripper_com_port", default_value="/tmp/ttyUR", description="Gripper Comm Port")
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_sim',
+            default_value='false',
+            description='Start robot in Gazebo Ignition simulation.',
+            choices=["true", "false"],
+        ),
     )
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
