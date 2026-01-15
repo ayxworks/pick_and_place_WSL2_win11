@@ -94,9 +94,10 @@ public:
         }
     }
 
-    // Move the arm to a named joint configuration
+    // Move the arm to a named joint configuration in MoveIt
     bool move_to_named_target(const std::string &target_name)
     {
+        set_ompl_planner();
         arm_->setNamedTarget(target_name);
         moveit::planning_interface::MoveGroupInterface::Plan plan;
 

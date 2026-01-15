@@ -1,0 +1,43 @@
+obstacles:
+
+  # =========================
+  # BOX
+  # =========================
+  # - id: table
+  #   type: box
+  #   frame: world
+  #   size: [1.2, 0.8, 0.75]      # x, y, z
+  #   position: [0.6, 0.0, 0.375]
+  #   orientation: [0.0, 0.0, 0.0, 1.0]
+
+  # # =========================
+  # # SPHERE
+  # # =========================
+  # - id: ball
+  #   type: sphere
+  #   frame: world
+  #   radius: 0.15
+  #   position: [0.2, -0.5, 0.15]
+  #   orientation: [0.0, 0.0, 0.0, 1.0]
+
+  # # =========================
+  # # CYLINDER
+  # # =========================
+  # - id: pillar
+  #   type: cylinder
+  #   frame: world
+  #   radius: 0.12
+  #   height: 1.2
+  #   position: [1.0, 0.4, 0.6]
+  #   orientation: [0.0, 0.0, 0.0, 1.0]
+
+  # # =========================
+  # # MESH
+  # # =========================
+  # - id: engine_block
+  #   type: mesh
+  #   frame: world
+  #   resource: package://pick_and_place/meshes/engine_block.stl
+  #   scale: 1.0
+  #   position: [-0.4, 0.3, 0.0]
+  #   orientation: [0.0, 0.0, 0.0, 1.0]

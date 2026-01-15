@@ -18,6 +18,9 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(moveit_core REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_msgs REQUIRED)
+find_package(yaml-cpp REQUIRED)
+find_package(shape_msgs REQUIRED)
+find_package(geometric_shapes REQUIRED)
 
 add_executable(pick_and_place_node src/pick_and_place_node.cpp)
 
@@ -32,8 +35,26 @@ ament_target_dependencies(pick_and_place_node
   moveit_msgs
 )
 
+add_executable(obstacle_publisher
+  src/obstacle_publisher_node.cpp
+)
+
+ament_target_dependencies(obstacle_publisher
+  rclcpp
+  moveit_ros_planning_interface
+  moveit_msgs
+  shape_msgs
+  geometric_shapes
+)
+
+target_link_libraries(obstacle_publisher
+  yaml-cpp
+)
+
 install(
-  TARGETS pick_and_place_node
+  TARGETS
+    pick_and_place_node
+    obstacle_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
