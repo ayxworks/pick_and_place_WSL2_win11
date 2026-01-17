@@ -1,0 +1,58 @@
+pose_estimator_service:
+  ros__parameters:
+    # Name of the object frame (will be published as TF)
+    # This frame represents the estimated 6D pose of the object
+    object_frame: "object"
+
+    # Path to the object's mesh file (.obj, .stl, etc.)
+    # This mesh is used as the 3D reference model for pose estimation
+    mesh_file: "/ros2_ws/src/vision_pipeline/vision_pipeline/models/mustard0/mustard0.obj"
+
+    # RGB-D camera topics
+    rgb_topic: "/camera/camera/color/image_raw"
+    depth_topic: "/camera/camera/aligned_depth_to_color/image_raw"
+    camera_info_topic: "/camera/camera/color/camera_info"
+
+    # Camera optical frame (camera reference frame)
+    # The estimated pose is published relative to this frame
+    camera_frame: "camera_color_optical_frame"
+
+    # Debug level (0-3)
+    # 0: No debug
+    # 1: Save pose to file + basic visualization
+    # 2: Save visualizations to disk
+    # 3: Save transformed model and point cloud
+    debug: 1
+
+    # Directory where debug files are saved
+    debug_dir: "/tmp/foundationpose_debug"
+
+    # Position offsets (in meters)
+    # These offsets are applied to the estimated pose before publishing it as TF
+    # Useful to compensate for systematic errors or adjust the reference point
+    position_offset:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+
+    # Orientation offsets (in degrees)
+    # These offsets allow aligning the object's coordinate system
+    # with the robot gripper's coordinate system
+    # For example, if the object's Z axis does not match the gripper's approach Z axis
+    orientation_offset:
+      roll: 0.0 # Rotation around the X axis (in degrees)
+      pitch: 0.0 # Rotation around the Y axis (in degrees)
+      yaw: 0.0 # Rotation around the Z axis (in degrees)
+
+    # FoundationPose estimation parameters
+    estimation_params:
+      # Number of refinement iterations in the initial estimation (register)
+      # Higher value = more accurate but slower
+      # Recommended: 4-6 for simple objects, 8-10 for complex objects
+      est_refine_iter: 5
+
+      # NNumber of refinement iterations in tracking
+      # Used when the service is called multiple times in a row
+      # Higher value = more accurate but slower
+      # Recommended: 2-3 (tracking is faster than register)
+      track_refine_iter: 2

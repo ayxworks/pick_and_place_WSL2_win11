@@ -19,59 +19,59 @@ def generate_launch_description():
 
     # Launch del driver del UR
     ur_control_launch = IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("setup_launch"),
-                            "launch",
-                            "ur_control.launch.py",
-                        ]
-                    )
-                ),
-                launch_arguments={
-                    "ur_type": "ur10e",
-                    "robot_ip": robot_ip,
-                    "launch_rviz": "false",
-                    "use_fake_hardware": "false",
-                    "initial_joint_controller": "scaled_joint_trajectory_controller",
-                    "activate_joint_controller": "true",
-                    "description_package": "setup_description",
-                    "description_file": "robot.urdf.xacro",
-                    "use_tool_communication": "true",
-                    "gripper_com_port": "/tmp/ttyUR",
-                    "tool_voltage": "24",
-                    "tool_parity": "0",
-                    "tool_baud_rate": "115200",
-                    "tool_stop_bits": "1",
-                    "tool_rx_idle_chars": "1.5",
-                    "tool_tx_idle_chars": "3.5",
-                    "tool_device_name": "/tmp/ttyUR",
-                }.items(),
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("setup_launch"),
+                    "launch",
+                    "ur_control.launch.py",
+                ]
             )
-    
+        ),
+        launch_arguments={
+            "ur_type": "ur10e",
+            "robot_ip": robot_ip,
+            "launch_rviz": "false",
+            "use_fake_hardware": "false",
+            "initial_joint_controller": "scaled_joint_trajectory_controller",
+            "activate_joint_controller": "true",
+            "description_package": "setup_description",
+            "description_file": "robot.urdf.xacro",
+            "use_tool_communication": "true",
+            "gripper_com_port": "/tmp/ttyUR",
+            "tool_voltage": "24",
+            "tool_parity": "0",
+            "tool_baud_rate": "115200",
+            "tool_stop_bits": "1",
+            "tool_rx_idle_chars": "1.5",
+            "tool_tx_idle_chars": "3.5",
+            "tool_device_name": "/tmp/ttyUR",
+        }.items(),
+    )
+
     # Launch de MoveIt
     moveit_launch = IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("setup_moveit_config"),
-                            "launch",
-                            "ur_moveit.launch.py",
-                        ]
-                    )
-                ),
-                launch_arguments={
-                    "ur_type": "ur10e",
-                    "launch_rviz": "true",
-                    "robot_ip": robot_ip,
-                    "description_package": "setup_description",
-                    "description_file": "robot.urdf.xacro",
-                    "moveit_config_package": "setup_moveit_config",
-                    "moveit_config_file": "ur.srdf.xacro",
-                    "gripper_com_port": "/tmp/ttyUR"
-                }.items(),
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("setup_moveit_config"),
+                    "launch",
+                    "ur_moveit.launch.py",
+                ]
             )
-    
+        ),
+        launch_arguments={
+            "ur_type": "ur10e",
+            "launch_rviz": "true",
+            "robot_ip": robot_ip,
+            "description_package": "setup_description",
+            "description_file": "robot.urdf.xacro",
+            "moveit_config_package": "setup_moveit_config",
+            "moveit_config_file": "ur.srdf.xacro",
+            "gripper_com_port": "/tmp/ttyUR",
+        }.items(),
+    )
+
     # Launch de RealSense D435
     realsense_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -98,11 +98,25 @@ def generate_launch_description():
         }.items(),
     )
 
+    # Launch vision pipeline
+    vision_pipeline_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("vision_pipeline"),
+                    "launch",
+                    "vision_node.launch.py",  # El nombre de tu launch file
+                ]
+            )
+        )
+    )
+
     return LaunchDescription(
-        declared_arguments +
-        [
-            ur_control_launch,
-            moveit_launch,
-            # realsense_launch
+        declared_arguments
+        + [
+            # ur_control_launch,
+            # moveit_launch,
+            realsense_launch,
+            vision_pipeline_launch
         ]
     )

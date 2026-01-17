@@ -9,6 +9,13 @@ services:
     stdin_open: true
     tty: true
     privileged: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     devices:
       - /dev/bus/usb:/dev/bus/usb
     environment:
@@ -22,4 +29,5 @@ services:
       source /opt/ros/humble/setup.bash &&
       source /ros2_ws/install/setup.bash &&
       ros2 launch setup_launch setup_launch.launch.py
+      # exec bash
       "
