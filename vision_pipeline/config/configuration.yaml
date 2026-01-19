@@ -6,7 +6,7 @@ pose_estimator_service:
 
     # Path to the object's mesh file (.obj, .stl, etc.)
     # This mesh is used as the 3D reference model for pose estimation
-    mesh_file: "/ros2_ws/src/vision_pipeline/vision_pipeline/models/mustard0/mustard0.obj"
+    mesh_file: "/ros2_ws/src/vision_pipeline/vision_pipeline/models/t_shape/t_shape.obj"
 
     # RGB-D camera topics
     rgb_topic: "/camera/camera/color/image_raw"

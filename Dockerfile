@@ -75,7 +75,7 @@ RUN /bin/bash -c "\
     apt update &&\ 
     rosdep install --from-paths src --ignore-src -r -y \
 "
-CMD ["bash"]
+
 # Source de ROS + build
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build"
 

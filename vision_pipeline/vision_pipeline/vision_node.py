@@ -52,25 +52,7 @@ FoundationPose.register = modified_register
 
 class PoseEstimatorService(Node):
     def __init__(self):
-        super().__init__("pose_estimator_service")
-
-        self.declare_parameter("object_frame", "object")
-        self.declare_parameter("mesh_file", "")
-        self.declare_parameter("rgb_topic", "/camera/camera/color/image_raw")
-        self.declare_parameter("depth_topic", "/camera/camera/aligned_depth_to_color/image_raw")
-        self.declare_parameter("camera_info_topic", "/camera/camera/color/camera_info")
-        self.declare_parameter("camera_frame", "camera_color_optical_frame")
-        self.declare_parameter("debug", 0)
-        self.declare_parameter("debug_dir", "/tmp/foundationpose_debug")
-
-        self.declare_parameter("position_offset.x", 0.0)
-        self.declare_parameter("position_offset.y", 0.0)
-        self.declare_parameter("position_offset.z", 0.0)
-        self.declare_parameter("orientation_offset.roll", 0.0)
-        self.declare_parameter("orientation_offset.pitch", 0.0)
-        self.declare_parameter("orientation_offset.yaw", 0.0)
-        self.declare_parameter("estimation_params.est_refine_iter", 5)
-        self.declare_parameter("estimation_params.track_refine_iter", 2)
+        super().__init__("pose_estimator_service", automatically_declare_parameters_from_overrides=True)
 
         self.object_frame = self.get_parameter("object_frame").value
         self.mesh_file = self.get_parameter("mesh_file").value
@@ -117,62 +99,19 @@ class PoseEstimatorService(Node):
         # Inicializar FoundationPose
         self.initialize_foundationpose()
 
+        # Inicializar camaras
+        # Crear suscriptores temporales
+        rgb_sub = self.create_subscription(Image, self.rgb_topic, self.rgb_callback, 10)
+
+        depth_sub = self.create_subscription(Image, self.depth_topic, self.depth_callback, 10)
+
+        if not self.camera_info_received:
+            camera_info_sub = self.create_subscription(CameraInfo, self.camera_info_topic, self.camera_info_callback, 10)
+
         # Crear servicio
         self.srv = self.create_service(Trigger, "estimate_pose", self.estimate_pose_callback)
 
         self.get_logger().info("Pose Estimator Service initialized and ready")
-
-    def load_configuration(self, config_file):
-        """Cargar configuración desde archivo YAML"""
-        try:
-            # Buscar el archivo en diferentes ubicaciones posibles
-            possible_paths = [config_file, os.path.join(os.path.dirname(__file__), "..", config_file), os.path.join(os.getcwd(), config_file)]
-
-            config_path = None
-            for path in possible_paths:
-                if os.path.exists(path):
-                    config_path = path
-                    break
-
-            if config_path is None:
-                self.get_logger().warn(f"Configuration file not found, using defaults")
-                self.use_default_configuration()
-                return
-
-            with open(config_path, "r") as f:
-                config = yaml.safe_load(f)
-
-            # Cargar parámetros del YAML
-            self.object_frame = config.get("object_frame", "object")
-
-            # Offsets de posición (metros)
-            position_offset = config.get("position_offset", {})
-            self.pos_offset_x = position_offset.get("x", 0.0)
-            self.pos_offset_y = position_offset.get("y", 0.0)
-            self.pos_offset_z = position_offset.get("z", 0.0)
-
-            # Offsets de orientación (grados)
-            orientation_offset = config.get("orientation_offset", {})
-            self.rot_offset_roll = np.deg2rad(orientation_offset.get("roll", 0.0))
-            self.rot_offset_pitch = np.deg2rad(orientation_offset.get("pitch", 0.0))
-            self.rot_offset_yaw = np.deg2rad(orientation_offset.get("yaw", 0.0))
-
-            # Mesh file (puede sobreescribirse con parámetro ROS)
-            if not self.mesh_file:
-                self.mesh_file = config.get("mesh_file", "")
-
-            # Parámetros de estimación (pueden sobreescribirse con parámetros ROS)
-            estimation_params = config.get("estimation_params", {})
-            if self.est_refine_iter == 5:  # Si es el valor por defecto
-                self.est_refine_iter = estimation_params.get("est_refine_iter", 5)
-            if self.track_refine_iter == 2:  # Si es el valor por defecto
-                self.track_refine_iter = estimation_params.get("track_refine_iter", 2)
-
-            self.get_logger().info(f"Configuration loaded from {config_path}")
-
-        except Exception as e:
-            self.get_logger().error(f"Error loading configuration: {str(e)}")
-            exit(1)
 
     def initialize_foundationpose(self):
         """Inicializar el estimador FoundationPose"""
@@ -254,15 +193,15 @@ class PoseEstimatorService(Node):
     def apply_offsets(self, pose):
         """Aplicar offsets de posición y orientación a la pose"""
         # Offset de posición
-        offset_translation = np.array([self.pos_offset_x, self.pos_offset_y, self.pos_offset_z])
+        offset_translation = np.array([self.position_offset["x"], self.position_offset["y"], self.position_offset["z"]])
 
         # Offset de orientación (roll, pitch, yaw) -> matriz de rotación
-        cr = np.cos(self.rot_offset_roll)
-        sr = np.sin(self.rot_offset_roll)
-        cp = np.cos(self.rot_offset_pitch)
-        sp = np.sin(self.rot_offset_pitch)
-        cy = np.cos(self.rot_offset_yaw)
-        sy = np.sin(self.rot_offset_yaw)
+        cr = np.cos(self.orientation_offset["roll"])
+        sr = np.sin(self.orientation_offset["roll"])
+        cp = np.cos(self.orientation_offset["pitch"])
+        sp = np.sin(self.orientation_offset["pitch"])
+        cy = np.cos(self.orientation_offset["yaw"])
+        sy = np.sin(self.orientation_offset["yaw"])
 
         # Matriz de rotación ZYX (yaw-pitch-roll)
         offset_rotation = np.array([[cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr], [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr], [-sp, cp * sr, cp * cr]])
@@ -317,37 +256,11 @@ class PoseEstimatorService(Node):
         try:
             self.get_logger().info("Pose estimation service called")
 
-            # Resetear flags
-            with self.lock:
-                self.rgb_received = False
-                self.depth_received = False
-                if not self.camera_info_received:
-                    self.get_logger().info("Waiting for camera info...")
-
-            # Crear suscriptores temporales
-            rgb_sub = self.create_subscription(Image, self.rgb_topic, self.rgb_callback, 10)
-
-            depth_sub = self.create_subscription(Image, self.depth_topic, self.depth_callback, 10)
-
-            if not self.camera_info_received:
-                camera_info_sub = self.create_subscription(CameraInfo, self.camera_info_topic, self.camera_info_callback, 10)
-
-            # Esperar a recibir imágenes (timeout de 5 segundos)
-            timeout = 5.0
-            start_time = self.get_clock().now()
-
-            while rclpy.ok():
-                rclpy.spin_once(self, timeout_sec=0.1)
-
-                with self.lock:
-                    if self.rgb_received and self.depth_received and self.camera_info_received:
-                        break
-
-                if (self.get_clock().now() - start_time).nanoseconds / 1e9 > timeout:
-                    response.success = False
-                    response.message = "Timeout waiting for camera data"
-                    self.get_logger().error(response.message)
-                    return response
+            if not (self.rgb_received and self.depth_received and self.camera_info_received):
+                response.success = False
+                response.message = "RGB, Depth or Camera Info not received yet"
+                self.get_logger().warning(response.message)
+                return response
 
             # Copiar datos para procesamiento
             with self.lock:
@@ -356,8 +269,8 @@ class PoseEstimatorService(Node):
                 K = self.camera_K.copy()
 
             # Destruir suscriptores temporales
-            self.destroy_subscription(rgb_sub)
-            self.destroy_subscription(depth_sub)
+            # self.destroy_subscription(rgb_sub)
+            # self.destroy_subscription(depth_sub)
 
             timestamp = self.get_clock().now().to_msg()
 
