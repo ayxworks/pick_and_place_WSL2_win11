@@ -8,6 +8,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def launch_setup(context, *args, **kwargs):
     
+    robot_name = LaunchConfiguration("robot_name", default="ur")
     robot_ip = LaunchConfiguration("robot_ip")
     use_sim = LaunchConfiguration("use_sim", default="false")
     controllers_file = LaunchConfiguration("controllers_file", default="ur_controllers.yaml")
@@ -28,6 +29,7 @@ def launch_setup(context, *args, **kwargs):
                     )
                 ),
                 launch_arguments={
+                    "robot_name": robot_name,
                     "ur_type": "ur10e",
                     "robot_ip": robot_ip,
                     "launch_rviz": "false",
@@ -63,6 +65,7 @@ def launch_setup(context, *args, **kwargs):
                     )
                 ),
                 launch_arguments={
+                    "robot_name": robot_name,
                     "ur_type": "ur10e",
                     "launch_rviz": "true",
                     "robot_ip": robot_ip,
@@ -88,6 +91,13 @@ def generate_launch_description():
     
     declared_arguments = []
     
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_name",
+            default_value="ur",
+            description="Robot name.",
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             "robot_ip",

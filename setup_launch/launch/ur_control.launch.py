@@ -56,6 +56,7 @@ def launch_setup(context, *args, **kwargs):
     controllers_folder = "config"
     
     # Initialize Arguments
+    robot_name = LaunchConfiguration("robot_name", default="ur10e")
     ur_type = LaunchConfiguration("ur_type")
     robot_ip = LaunchConfiguration("robot_ip")
     safety_limits = LaunchConfiguration("safety_limits")
@@ -149,7 +150,7 @@ def launch_setup(context, *args, **kwargs):
             safety_k_position,
             " ",
             "name:=",
-            ur_type,
+            robot_name,
             " ",
             "script_filename:=",
             script_filename,
@@ -475,6 +476,13 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     declared_arguments = []
     # UR specific arguments
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_name",
+            default_value="ur10e",
+            description="Robot name.",
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             "ur_type",

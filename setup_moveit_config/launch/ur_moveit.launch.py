@@ -50,6 +50,7 @@ from launch.substitutions import (
 def launch_setup(context, *args, **kwargs):
 
     # Initialize Arguments
+    robot_name = LaunchConfiguration("robot_name", default="ur")
     ur_type = LaunchConfiguration("ur_type")
     safety_limits = LaunchConfiguration("safety_limits")
     safety_pos_margin = LaunchConfiguration("safety_pos_margin")
@@ -115,7 +116,7 @@ def launch_setup(context, *args, **kwargs):
             safety_k_position,
             " ",
             "name:=",
-            "ur",
+            robot_name,
             " ",
             "ur_type:=",
             ur_type,
@@ -159,7 +160,7 @@ def launch_setup(context, *args, **kwargs):
             "name:=",
             # Also ur_type parameter could be used but then the planning group names in yaml
             # configs has to be updated!
-            "ur",
+            robot_name,
             " ",
             "prefix:=",
             prefix,
@@ -325,6 +326,13 @@ def generate_launch_description():
 
     declared_arguments = []
     # UR specific arguments
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_name",
+            default_value="ur",
+            description="Robot name.",
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             "ur_type",
