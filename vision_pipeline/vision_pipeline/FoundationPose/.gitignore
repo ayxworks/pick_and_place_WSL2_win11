@@ -67,7 +67,6 @@ coverage.xml
 *.cover
 demo_data/
 debug/
-weights/
 *.py,cover
 .hypothesis/
 .pytest_cache/
