@@ -3,7 +3,7 @@
 
   <xacro:arg name="name" default="ur"/>
   <xacro:arg name="use_sim" default="false"/>
-  
+  <xacro:arg name="include_digilab" default="false"/>
 
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
   
@@ -52,12 +52,27 @@
 
   <!-- create link fixed to the "world" -->
   <link name="world" />
+
+  <!-- Digilab -->
+  <xacro:property name="comparable_include_digilab" value="$(arg include_digilab)" />
+  
+  <xacro:if value="${comparable_include_digilab}">
+    <xacro:include filename="$(find setup_description)/urdf/digilab_macro.urdf.xacro" />
+    <xacro:digilab parent="world" prefix="">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:digilab>
+    <xacro:property name="ur_parent" value="stand_mounting" />
+  </xacro:if>
+
+  <xacro:unless value="${comparable_include_digilab}">
+    <xacro:property name="ur_parent" value="world" />
+  </xacro:unless>
   
   <!-- arm -->
   <xacro:ur_robot
     name="$(arg name)"
     tf_prefix="$(arg tf_prefix)"
-    parent="world"
+    parent="${ur_parent}"
     joint_limits_parameters_file="$(arg joint_limit_params)"
     kinematics_parameters_file="$(arg kinematics_params)"
     physical_parameters_file="$(arg physical_params)"

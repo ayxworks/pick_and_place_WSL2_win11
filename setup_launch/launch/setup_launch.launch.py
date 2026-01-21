@@ -11,6 +11,7 @@ def launch_setup(context, *args, **kwargs):
     robot_name = LaunchConfiguration("robot_name", default="ur")
     robot_ip = LaunchConfiguration("robot_ip")
     use_sim = LaunchConfiguration("use_sim", default="false")
+    include_digilab = LaunchConfiguration("include_digilab", default="false")
     controllers_file = LaunchConfiguration("controllers_file", default="ur_controllers.yaml")
     use_cam_flange_support = LaunchConfiguration("use_cam_flange_support", default="false")
 
@@ -50,6 +51,7 @@ def launch_setup(context, *args, **kwargs):
                     "use_sim": use_sim,
                     "controllers_file": controllers_file,
                     "use_cam_flange_support": use_cam_flange_support,
+                    "include_digilab": include_digilab,
                 }.items(),
             )
     
@@ -76,6 +78,7 @@ def launch_setup(context, *args, **kwargs):
                     "gripper_com_port": "/tmp/ttyUR",
                     "use_sim_time": use_sim,
                     "use_cam_flange_support": use_cam_flange_support,
+                    "include_digilab": include_digilab,
                 }.items(),
             )
     
@@ -110,6 +113,14 @@ def generate_launch_description():
             'use_sim',
             default_value='false',
             description='Start robot in Gazebo Ignition simulation.',
+            choices=["true", "false"],
+        ),
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'include_digilab',
+            default_value='false',
+            description='If true, digilab surroundings added to URDF.',
             choices=["true", "false"],
         ),
     )

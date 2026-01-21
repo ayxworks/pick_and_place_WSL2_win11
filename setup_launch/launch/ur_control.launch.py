@@ -94,6 +94,7 @@ def launch_setup(context, *args, **kwargs):
     gripper_com_port = LaunchConfiguration("gripper_com_port")
     use_sim = LaunchConfiguration("use_sim", default="false")
     use_cam_flange_support = LaunchConfiguration("use_cam_flange_support", default="false")
+    include_digilab = LaunchConfiguration("include_digilab", default="false")
 
     if use_sim.perform(context) == "true":
         use_sim_time= True
@@ -226,6 +227,9 @@ def launch_setup(context, *args, **kwargs):
             ' ',
             'use_cam_flange_support:=',
             use_cam_flange_support,
+            ' ',
+            'include_digilab:=',
+            include_digilab
         ]
     )
     robot_description = {
@@ -769,6 +773,14 @@ def generate_launch_description():
             'use_cam_flange_support',
             default_value='false',
             description='Whether to include cam flange support.',
+            choices=["true", "false"],
+        ),
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'include_digilab',
+            default_value='false',
+            description='If true, digilab surroundings added to URDF.',
             choices=["true", "false"],
         ),
     )
