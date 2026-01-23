@@ -48,7 +48,6 @@ cd ..
 ```
 
 #### 3. Import dependencies
-
 Use `vcs` to import all required dependencies from the `dependencies.repos` file:
 ```bash
 vcs import src < src/<repository-name>/dependencies.repos
@@ -72,6 +71,9 @@ source install/setup.bash
 ```bash
 ros2 launch setup_launch setup_launch.launch.py
 ```
+
+### 8. Play External Control program from the UR Teach Pendant
+
 
 ## Troubleshooting
 

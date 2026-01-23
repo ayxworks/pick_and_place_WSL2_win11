@@ -2,7 +2,8 @@
 <robot xmlns:xacro="http://wiki.ros.org/xacro" name="$(arg name)">
 
   <xacro:arg name="name" default="ur"/>
-  
+  <xacro:arg name="use_sim" default="false"/>
+  <xacro:arg name="include_digilab" default="false"/>
 
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
   
@@ -39,15 +40,44 @@
   <xacro:arg name="add_plug" default="false" />
   <xacro:arg name="use_mesh" default="true" />
   
-  
+  <xacro:arg name="controllers_file" default="config/ur_controllers.yaml"/>
+  <xacro:arg name="use_cam_flange_support" default="false"/>
+
+  <!-- Gazebo Ignition plugin -->
+  <xacro:property name="comparable_use_sim" value="$(arg use_sim)" />
+  <xacro:if value="${comparable_use_sim}">
+    <xacro:include filename="$(find setup_description)/gazebo/ur_robotiq.ignition_macro.xacro" />
+    <xacro:ur_robotiq_ignition_macro 
+      runtime_config_package="setup_description"
+      path_to_yaml="$(arg controllers_file)"
+      namespace="/"
+      prefix="$(arg tf_prefix)"
+    />
+  </xacro:if>
+
   <!-- create link fixed to the "world" -->
   <link name="world" />
+
+  <!-- Digilab -->
+  <xacro:property name="comparable_include_digilab" value="$(arg include_digilab)" />
+  
+  <xacro:if value="${comparable_include_digilab}">
+    <xacro:include filename="$(find setup_description)/urdf/digilab_macro.urdf.xacro" />
+    <xacro:digilab parent="world" prefix="">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:digilab>
+    <xacro:property name="ur_parent" value="stand_mounting" />
+  </xacro:if>
+
+  <xacro:unless value="${comparable_include_digilab}">
+    <xacro:property name="ur_parent" value="world" />
+  </xacro:unless>
   
   <!-- arm -->
   <xacro:ur_robot
     name="$(arg name)"
     tf_prefix="$(arg tf_prefix)"
-    parent="world"
+    parent="${ur_parent}"
     joint_limits_parameters_file="$(arg joint_limit_params)"
     kinematics_parameters_file="$(arg kinematics_params)"
     physical_parameters_file="$(arg physical_params)"
@@ -55,6 +85,7 @@
     safety_limits="$(arg safety_limits)"
     safety_pos_margin="$(arg safety_pos_margin)"
     safety_k_position="$(arg safety_k_position)"
+    sim_ignition="$(arg use_sim)"
     use_tool_communication="$(arg use_tool_communication)"
     robot_ip="$(arg robot_ip)"
     script_filename="$(arg script_filename)"
@@ -70,13 +101,29 @@
     <origin xyz="0 0 0" rpy="0 0 0" /> 
   </xacro:ur_robot>
 
-  <xacro:ur_to_robotiq prefix="" parent="tool0" child="adapter_to_gripper"/>
+  <!-- Camera flange support -->
+  <xacro:property name="comparable_use_cam_flange_support" value="$(arg use_cam_flange_support)" />
+
+  <xacro:if value="${comparable_use_cam_flange_support}">
+    <xacro:property name="ur_to_robotiq_adapter_parent" value="cam_flange_ring_mounting" />
+    <xacro:include filename="$(find cam_flange_support)/urdf/cam_flange_support_macro.urdf.xacro" />
+    <xacro:cam_flange_support parent="tool0" >
+      <origin xyz="0 0 0" rpy="0 0 ${pi}" /> 
+    </xacro:cam_flange_support>
+  </xacro:if>
+
+  <xacro:unless value="${comparable_use_cam_flange_support}">
+    <xacro:property name="ur_to_robotiq_adapter_parent" value="tool0" />
+  </xacro:unless>
+
+  <xacro:ur_to_robotiq prefix="" parent="${ur_to_robotiq_adapter_parent}" child="adapter_to_gripper"/>
 
   <!-- Robotiq 2F-140 Gripper connected to adapter -->
   <xacro:robotiq_gripper 
     name="RobotiqGripperHardwareInterface" 
     prefix="" 
     parent="adapter_to_gripper"
+    sim_ignition="$(arg use_sim)"
     use_fake_hardware="$(arg use_fake_hardware)"
     com_port="$(arg gripper_com_port)">
     <origin xyz="0 0 0" rpy="0 0 0"/>

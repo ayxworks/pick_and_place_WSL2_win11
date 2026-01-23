@@ -50,6 +50,7 @@ from launch.substitutions import (
 def launch_setup(context, *args, **kwargs):
 
     # Initialize Arguments
+    robot_name = LaunchConfiguration("robot_name", default="ur")
     ur_type = LaunchConfiguration("ur_type")
     safety_limits = LaunchConfiguration("safety_limits")
     safety_pos_margin = LaunchConfiguration("safety_pos_margin")
@@ -69,6 +70,8 @@ def launch_setup(context, *args, **kwargs):
     use_fake_hardware = LaunchConfiguration("use_fake_hardware")
     gripper_com_port = LaunchConfiguration("gripper_com_port")
     robot_ip = LaunchConfiguration("robot_ip")
+    use_cam_flange_support = LaunchConfiguration("use_cam_flange_support", default="false")
+    include_digilab = LaunchConfiguration("include_digilab", default="false")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
@@ -114,7 +117,7 @@ def launch_setup(context, *args, **kwargs):
             safety_k_position,
             " ",
             "name:=",
-            "ur",
+            robot_name,
             " ",
             "ur_type:=",
             ur_type,
@@ -134,6 +137,15 @@ def launch_setup(context, *args, **kwargs):
             "gripper_com_port:=",
             gripper_com_port,
             " ",
+            'use_sim:=',
+            use_sim_time,
+            ' ',
+            ' ',
+            'use_cam_flange_support:=',
+            use_cam_flange_support,
+            ' ',
+            'include_digilab:=',
+            include_digilab
         ]
     )
     robot_description = {
@@ -152,11 +164,14 @@ def launch_setup(context, *args, **kwargs):
             "name:=",
             # Also ur_type parameter could be used but then the planning group names in yaml
             # configs has to be updated!
-            "ur",
+            robot_name,
             " ",
             "prefix:=",
             prefix,
             " ",
+            ' ',
+            'use_cam_flange_support:=',
+            use_cam_flange_support,
         ]
     )
     robot_description_semantic = {"robot_description_semantic": robot_description_semantic_content}
@@ -302,7 +317,11 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
     )
 
-    nodes_to_start = [move_group_node, rviz_node, servo_node]
+    nodes_to_start = [
+        move_group_node, 
+        rviz_node, 
+        servo_node,
+    ]
 
     return nodes_to_start
 
@@ -311,6 +330,13 @@ def generate_launch_description():
 
     declared_arguments = []
     # UR specific arguments
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "robot_name",
+            default_value="ur",
+            description="Robot name.",
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             "ur_type",
@@ -436,6 +462,22 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument("robot_ip", description="IP of the UR")
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_cam_flange_support',
+            default_value='false',
+            description='Whether to include cam flange support.',
+            choices=["true", "false"],
+        ),
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'include_digilab',
+            default_value='false',
+            description='If true, digilab surroundings added to URDF.',
+            choices=["true", "false"],
+        ),
     )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

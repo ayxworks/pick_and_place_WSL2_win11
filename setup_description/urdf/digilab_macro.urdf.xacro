@@ -1,0 +1,162 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="digilab">
+    <xacro:macro name="digilab" params="
+        parent='world' 
+        prefix:='' 
+        *origin"
+    >
+
+        <!-- Robot stand -->
+        <link name="${prefix}stand">
+            <inertial>
+                <mass value="4" />
+                <inertia ixx="0.4" ixy="0.0" ixz="0.0" iyy="0.4" iyz="0.0" izz="0.2"/>
+            </inertial>
+            <visual>
+                <geometry>
+                    <mesh filename="package://setup_description/meshes/visual/Robot_Stand.dae" />
+                </geometry>
+                <material name="grey">
+                    <color rgba="0.5 0.5 0.5 1.0"/>
+                </material>
+                <origin xyz="0.40 -0.03 0" rpy="0 0 ${pi}" />
+            </visual>
+            <collision>
+                <geometry>
+                    <mesh filename="package://setup_description/meshes/collision/Robot_Stand.stl" />
+                </geometry>
+                <origin xyz="0.40 -0.03 0" rpy="0 0 ${pi}" />
+            </collision>
+        </link>
+
+        <joint name="${prefix}${parent}_to_stand" type="fixed">
+            <xacro:insert_block name="origin" />
+            <parent link="${parent}" />
+            <child link="${prefix}stand" />
+        </joint>
+
+        <link name="${prefix}stand_mounting"/>
+
+        <joint name="${prefix}stand_to_mounting" type="fixed">
+            <parent link="${prefix}stand" />
+            <child link="${prefix}stand_mounting" />
+            <origin xyz="0.0 0.0 0.751" rpy="0.0 0.0 0.0" />
+        </joint>
+
+        <!-- Auxiliary table and L aluminum profile -->
+        <xacro:property name="extra_thickness_collision_coefficient" value="1.1" />
+
+        <link name="${prefix}aux_table_corner"/>
+
+        <joint name="${prefix}stand_to_aux_table" type="fixed" >
+            <parent link="${prefix}stand"/>
+            <child link="${prefix}aux_table_corner"/>
+            <origin xyz="-1.26 -0.05 0.0" rpy="0.0 0.0 0.0" />
+        </joint>
+
+        <link name="${prefix}aux_table">
+            <collision>
+                <geometry>
+                    <box size="${0.6*extra_thickness_collision_coefficient} 
+                               ${0.8*extra_thickness_collision_coefficient} 
+                               ${0.63*extra_thickness_collision_coefficient}" />
+                </geometry>
+            </collision>
+            <visual>
+                <geometry>
+                    <box size="0.6 0.8 0.63" />
+                </geometry>
+                <material name="grey">
+                    <color rgba="0.5 0.5 0.5 1.0"/>
+                </material>
+            </visual>
+        </link>
+
+        <joint name="${prefix}aux_table_corner_to_table" type="fixed">
+            <parent link="${prefix}aux_table_corner"/>
+            <child link="${prefix}aux_table"/>
+            <origin xyz="0.3 0.4 0.315" rpy="0.00 0.00 0.00" />
+        </joint>
+
+        <link name="${prefix}aux_table_profile_origin"/>
+
+        <joint name="${prefix}aux_table_corner_to_profile_origin" type="fixed">
+            <parent link="${prefix}aux_table_corner"/>
+            <child link="${prefix}aux_table_profile_origin"/>
+            <origin xyz="-0.0225 0.275 0.63" rpy="0.0 0.0 0.0"/>
+        </joint>
+
+        <link name="${prefix}aluminum_profile_vertical">
+            <collision>
+                <geometry>
+                    <box size="${0.045*extra_thickness_collision_coefficient} 
+                               ${0.045*extra_thickness_collision_coefficient} 
+                               ${0.97*extra_thickness_collision_coefficient}" />
+                </geometry>
+            </collision>
+            <visual>
+                <geometry>
+                    <box size="0.045 0.045 0.97" />
+                </geometry>
+                <material name="grey">
+                    <color rgba="0.5 0.5 0.5 1.0"/>
+                </material>
+            </visual>
+        </link>
+
+        <joint name="${prefix}aux_table_profile_origin_to_profile_vertical" type="fixed">
+            <parent link="${prefix}aux_table_profile_origin"/>
+            <child link="${prefix}aluminum_profile_vertical"/>
+            <origin xyz="0.0 0.0 0.485" rpy="0.00 0.00 0.00" />
+        </joint>
+
+        <link name="${prefix}aluminum_profile_vertical_top"/>
+
+        <joint name="${prefix}aux_table_profile_origin_to_profile_vertical_top" type="fixed">
+            <parent link="${prefix}aux_table_profile_origin"/>
+            <child link="${prefix}aluminum_profile_vertical_top"/>
+            <origin xyz="0.0 0.0 0.97" rpy="0.00 0.00 0.00" />
+        </joint>
+
+        <link name="${prefix}aluminum_profile_horizontal">
+            <collision>
+                <geometry>
+                    <box size="${0.4*extra_thickness_collision_coefficient} 
+                               ${0.045*extra_thickness_collision_coefficient} 
+                               ${0.045*extra_thickness_collision_coefficient}" />
+                </geometry>
+            </collision>
+            <visual>
+                <geometry>
+                    <box size="0.4 0.045 0.045" />
+                </geometry>
+                <material name="grey">
+                    <color rgba="0.5 0.5 0.5 1.0"/>
+                </material>
+            </visual>
+        </link>
+
+        <joint name="${prefix}aluminum_profile_vertical_top_to_horizontal" type="fixed">
+            <parent link="${prefix}aluminum_profile_vertical_top"/>
+            <child link="${prefix}aluminum_profile_horizontal"/>
+            <origin xyz="0.2225 0.0 0.0225" rpy="0.00 0.00 0.00" />
+        </joint>
+
+        <!-- GAZEBO COLOR -->
+        <xacro:macro name="apply_gazebo_material" params="link_name red green blue intensity:=1">
+            <gazebo reference="${link_name}">
+                <visual>
+                    <material>
+                        <ambient>${red} ${green} ${blue} ${intensity}</ambient>
+                        <diffuse>${red} ${green} ${blue} ${intensity}</diffuse>
+                        <specular>0.1 0.1 0.1 1</specular>
+                        <emissive>0 0 0 1</emissive>
+                    </material>
+                </visual>
+            </gazebo>
+        </xacro:macro>
+
+        <xacro:apply_gazebo_material link_name="${prefix}stand" red="0.5" green="0.5" blue="0.5" intensity="1.0" />
+
+    </xacro:macro>
+</robot>
