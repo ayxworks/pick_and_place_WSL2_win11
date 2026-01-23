@@ -78,7 +78,7 @@ class PoseEstimatorService(Node):
 
         # Inicializar variables
         self.bridge = CvBridge()
-        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        self.tf_broadcaster = tf2_ros.StaticTransformBroadcaster(self)
         self.lock = Lock()
 
         # Variables para almacenar imágenes y datos de cámara
@@ -100,7 +100,7 @@ class PoseEstimatorService(Node):
         self.initialize_foundationpose()
 
         # Inicializar camaras
-        # Crear suscriptores temporales
+        # Crear suscriptores
         rgb_sub = self.create_subscription(Image, self.rgb_topic, self.rgb_callback, 10)
 
         depth_sub = self.create_subscription(Image, self.depth_topic, self.depth_callback, 10)

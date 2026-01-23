@@ -85,7 +85,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             "camera_name": "camera",
-            "camera_namespace": "camera",
+            "camera_namespace": "",
             "enable_color": "true",
             "enable_depth": "true",
             "enable_infra1": "false",
@@ -105,7 +105,7 @@ def generate_launch_description():
                 [
                     FindPackageShare("vision_pipeline"),
                     "launch",
-                    "vision_node.launch.py",  # El nombre de tu launch file
+                    "vision_node.launch.py",
                 ]
             )
         )

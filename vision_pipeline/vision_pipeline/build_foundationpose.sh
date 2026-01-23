@@ -2,9 +2,6 @@
 
 PROJ_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-# Install dependencies
-pip install -r requirements.txt 
-
 # Install pybind11
 cd ${PROJ_ROOT}/FoundationPose && git clone https://github.com/pybind/pybind11 && \
     cd pybind11 && git checkout v2.10.0 && \
