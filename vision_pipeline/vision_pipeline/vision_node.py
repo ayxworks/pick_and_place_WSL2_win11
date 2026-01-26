@@ -14,6 +14,7 @@ import yaml
 import os
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from std_srvs.srv import Trigger
 from threading import Lock
 import tf2_ros
@@ -91,7 +92,6 @@ class PoseEstimatorService(Node):
 
         # Variables de FoundationPose
         self.pose_estimator = None
-        self.is_initialized = False
         self.mesh = None
         self.to_origin = None
         self.bbox = None
@@ -101,9 +101,10 @@ class PoseEstimatorService(Node):
 
         # Inicializar camaras
         # Crear suscriptores
-        rgb_sub = self.create_subscription(Image, self.rgb_topic, self.rgb_callback, 10)
 
-        depth_sub = self.create_subscription(Image, self.depth_topic, self.depth_callback, 10)
+        self.rgb_sub = self.create_subscription(Image, self.rgb_topic, self.rgb_callback, 10)
+
+        self.depth_sub = self.create_subscription(Image, self.depth_topic, self.depth_callback, 10)
 
         if not self.camera_info_received:
             camera_info_sub = self.create_subscription(CameraInfo, self.camera_info_topic, self.camera_info_callback, 10)
@@ -250,6 +251,8 @@ class PoseEstimatorService(Node):
         vis = draw_posed_3d_box(self.camera_K, img=image, ob_in_cam=center_pose, bbox=self.bbox)
         vis = draw_xyz_axis(vis, ob_in_cam=center_pose, scale=0.1, K=self.camera_K, thickness=3, transparency=0, is_input_rgb=True)
         return vis
+    
+    
 
     def estimate_pose_callback(self, request, response):
         """Callback del servicio para estimar pose"""
@@ -285,19 +288,12 @@ class PoseEstimatorService(Node):
             # Estimar pose
             self.get_logger().info("Running pose estimation...")
 
-            if not self.is_initialized:
-                # Primera estimación: crear máscara automática
-                mask = (depth > 0.1) & (depth < 3.0)  # Rango de profundidad válida
+            # Estimación: crear máscara automática
+            mask = (depth > 0.1) & (depth < 3.0)  # Rango de profundidad válida
 
-                pose = self.pose_estimator.register(K=K, rgb=color, depth=depth, ob_mask=mask, iteration=self.est_refine_iter)
+            pose = self.pose_estimator.register(K=K, rgb=color, depth=depth, ob_mask=mask, iteration=self.est_refine_iter)
 
-                self.is_initialized = True
-                self.get_logger().info("Initial pose registered")
-            else:
-                # Tracking subsiguiente
-                pose = self.pose_estimator.track_one(rgb=color, depth=depth, K=K, iteration=self.track_refine_iter)
-
-                self.get_logger().info("Pose tracked")
+            self.get_logger().info("Pose registered")
 
             # Aplicar transformación al centro del objeto
             center_pose = pose @ np.linalg.inv(self.to_origin)
@@ -310,6 +306,7 @@ class PoseEstimatorService(Node):
 
             # Visualización para debug
             if self.debug >= 1:
+                cv2.namedWindow("Pose Estimation", cv2.WINDOW_NORMAL)
                 vis = self.visualize_pose(color, center_pose)
                 cv2.imshow("Pose Estimation", vis[..., ::-1])
                 cv2.waitKey(1)

@@ -78,13 +78,55 @@ def launch_setup(context, *args, **kwargs):
                     "gripper_com_port": "/tmp/ttyUR",
                     "use_sim_time": use_sim,
                     "use_cam_flange_support": use_cam_flange_support,
-                    "include_digilab": bbbbb,
+                    "include_digilab": include_digilab,
                 }.items(),
             )
+    
+    # Launch de RealSense D435
+    realsense_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("realsense2_camera"),
+                    "launch",
+                    "rs_launch.py",
+                ]
+            )
+        ),
+        launch_arguments={
+            "camera_name": "camera",
+            "camera_namespace": "",
+            "enable_color": "true",
+            "enable_depth": "true",
+            "enable_infra1": "false",
+            "enable_infra2": "false",
+            "depth_module.profile": "640x480x30",
+            "rgb_camera.profile": "640x480x30",
+            "align_depth.enable": "true",
+            "pointcloud.enable": "true",
+            "publish_tf": "true",
+        }.items(),
+    )
+
+    # Launch vision pipeline
+    vision_pipeline_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("vision_pipeline"),
+                    "launch",
+                    "vision_node.launch.py",
+                ]
+            )
+        )
+    )
+
     
     nodes = [
         ur_control_launch, 
         moveit_launch,
+        realsense_launch,
+        vision_pipeline_launch
     ]
     
     return nodes
@@ -134,7 +176,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_cam_flange_support',
-            default_value='false',
+            default_value='true',
             description='Whether to include cam flange support.',
             choices=["true", "false"],
         ),
