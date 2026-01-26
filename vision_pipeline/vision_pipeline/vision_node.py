@@ -304,10 +304,13 @@ class PoseEstimatorService(Node):
             k = cv2.waitKey(100) & 0xFF
 
             if k in (ord("a"), ord("A")):
+                cv2.destroyWindow(self.window_name)
                 return "accept"
             if k in (ord("n"), ord("N")):
+                cv2.destroyWindow(self.window_name)
                 return "retry"
             if k in (ord("r"), ord("R"), 27):
+                cv2.destroyWindow(self.window_name)
                 return "reject"
 
     # --------------------------------------------------------
