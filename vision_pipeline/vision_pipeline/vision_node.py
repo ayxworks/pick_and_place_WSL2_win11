@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.join(module_dir, "FoundationPose/learning/models"))
 
 import rclpy
 from rclpy.node import Node
+from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from std_srvs.srv import Trigger
 from threading import Lock
 import tf2_ros
@@ -135,20 +137,25 @@ class PoseEstimatorService(Node):
         # ----------------------------------------------------
         # ROS subscriptions
         # ----------------------------------------------------
+
+        # Callback groups to allow concurrent callbacks
+        self.sensor_cb_group = ReentrantCallbackGroup()
+        self.service_cb_group = MutuallyExclusiveCallbackGroup()
+
         self.create_subscription(
-            Image, self.rgb_topic, self.rgb_callback, 10
+            Image, self.rgb_topic, self.rgb_callback, 10, callback_group=self.sensor_cb_group
         )
         self.create_subscription(
-            Image, self.depth_topic, self.depth_callback, 10
+            Image, self.depth_topic, self.depth_callback, 10, callback_group=self.sensor_cb_group
         )
         self.create_subscription(
             CameraInfo, self.camera_info_topic,
-            self.camera_info_callback, 10
+            self.camera_info_callback, 10, callback_group=self.sensor_cb_group
         )
 
         # Pose estimation service
         self.create_service(
-            Trigger, "estimate_pose", self.estimate_pose_callback
+            Trigger, "estimate_pose", self.estimate_pose_callback, callback_group=self.service_cb_group
         )
 
         self.get_logger().info("Pose Estimator Service initialized")
@@ -307,7 +314,6 @@ class PoseEstimatorService(Node):
                 cv2.destroyWindow(self.window_name)
                 return "accept"
             if k in (ord("n"), ord("N")):
-                cv2.destroyWindow(self.window_name)
                 return "retry"
             if k in (ord("r"), ord("R"), 27):
                 cv2.destroyWindow(self.window_name)
@@ -321,19 +327,20 @@ class PoseEstimatorService(Node):
         Estimates object pose, allows the user to
         accept, retry or reject the result.
         """
-        if not (self.rgb_received and self.depth_received and self.camera_info_received):
-            response.success = False
-            response.message = "Missing sensor data"
-            return response
-
-        with self.lock:
-            rgb = self.latest_rgb.copy()
-            depth = self.latest_depth.copy()
-            K = self.camera_K.copy()
-
-        stamp = self.get_clock().now().to_msg()
-
+        
         while True:
+            if not (self.rgb_received and self.depth_received and self.camera_info_received):
+                response.success = False
+                response.message = "Missing sensor data"
+                return response
+
+            with self.lock:
+                rgb = self.latest_rgb.copy()
+                depth = self.latest_depth.copy()
+                K = self.camera_K.copy()
+
+            stamp = self.get_clock().now().to_msg()
+
             # Remove invalid depth values
             depth[(depth < 0.1) | (depth > 3.0)] = 0
             mask = depth > 0
@@ -378,8 +385,16 @@ class PoseEstimatorService(Node):
 def main():
     rclpy.init()
     node = PoseEstimatorService()
-    rclpy.spin(node)
-    rclpy.shutdown()
+
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(node)
+
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

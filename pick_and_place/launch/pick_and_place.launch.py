@@ -3,6 +3,8 @@ from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
+from launch_ros.substitutions import FindPackageShare
+from launch.substitutions import PathJoinSubstitution
 import os
 
 def generate_launch_description():
@@ -33,7 +35,40 @@ def generate_launch_description():
         )
     )
 
+    setup_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('setup_launch'),
+                'launch',
+                'setup_launch.launch.py'
+            )
+        )
+    )
+
+    pick_and_place_gui_node = Node(
+        package='pick_and_place_gui',
+        executable='pick_place_gui',
+        name='pick_place_gui',
+        output='screen',
+    )
+
+    # Launch vision pipeline
+    vision_pipeline_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("vision_pipeline"),
+                    "launch",
+                    "vision_node.launch.py",
+                ]
+            )
+        )
+    )
+
     return LaunchDescription([
         pick_and_place_node,
-        publish_obstacles_launch
+        publish_obstacles_launch,
+        pick_and_place_gui_node,
+        setup_launch,
+        vision_pipeline_launch
     ])

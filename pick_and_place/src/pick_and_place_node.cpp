@@ -38,7 +38,19 @@ public:
 
         // Create service client for object detection
         detect_client_ = this->create_client<std_srvs::srv::Trigger>(detect_service_name_);
-    }
+
+        // Create start and stop services
+        start_srv_ = this->create_service<std_srvs::srv::Trigger>(
+            "start_pick_place",
+            std::bind(&PickAndPlaceNode::start_cb, this,
+                    std::placeholders::_1, std::placeholders::_2));
+
+        stop_srv_ = this->create_service<std_srvs::srv::Trigger>(
+            "stop_pick_place",
+            std::bind(&PickAndPlaceNode::stop_cb, this,
+                    std::placeholders::_1, std::placeholders::_2));
+
+            }
 
     // Initialize MoveIt MoveGroup interfaces
     void init_moveit()
@@ -51,6 +63,47 @@ public:
 
         RCLCPP_INFO(this->get_logger(), "MoveIt interfaces initialized");
     }
+
+    void start_cb(
+        const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> res)
+    {
+        if (running_) {
+            res->success = false;
+            res->message = "Pick & Place already running";
+            return;
+        }
+
+        running_ = true;
+        worker_thread_ = std::thread([this]() {
+            execute_pick_and_place();
+            running_ = false;
+        });
+
+        worker_thread_.detach();
+
+        res->success = true;
+        res->message = "Pick & Place started";
+    }
+
+    void stop_cb(
+        const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> res)
+    {
+        if (!running_) {
+            res->success = false;
+            res->message = "Pick & Place not running";
+            return;
+        }
+
+        running_ = false;
+        arm_->stop();
+        gripper_->stop();
+
+        res->success = true;
+        res->message = "Pick & Place stopped";
+    }
+
 
     // Call object detection service (blocking)
     bool call_detect_service()
@@ -126,7 +179,7 @@ public:
 
             // Move to home position
             RCLCPP_INFO(this->get_logger(), "Moving to home position");
-            if (!move_to_named_target(home_position_))
+            if (!move_to_named_target(home_position_) || !running_)
             {
                 RCLCPP_ERROR(this->get_logger(), "Failed to move to home position");
                 return;
@@ -134,28 +187,28 @@ public:
 
             // Move to observation pose
             RCLCPP_INFO(this->get_logger(), "Moving to observation position");
-            if (!move_to_named_target(observation_position_))
+            if (!move_to_named_target(observation_position_) || !running_)
             {
                 RCLCPP_ERROR(this->get_logger(), "Failed to move to observation position");
                 return;
             }
 
             // Run object detection
-            if (!call_detect_service())
+            if (!call_detect_service() || !running_)
             {
                 RCLCPP_ERROR(this->get_logger(), "Object detection failed, aborting sequence");
                 return;
             }
 
             // Execute pick
-            if (!pick(pre_pick_frame_))
+            if (!pick(pre_pick_frame_) || !running_)
             {
                 RCLCPP_ERROR(this->get_logger(), "Pick failed, aborting");
                 return;
             }
 
             // Execute place
-            if (!place(pre_place_frame_))
+            if (!place(pre_place_frame_) || !running_)
             {
                 RCLCPP_ERROR(this->get_logger(), "Place failed, aborting");
                 return;
@@ -398,6 +451,13 @@ private:
     double place_leave_distance_;
     double lift_distance_;
     double drop_distance_;
+
+    std::atomic_bool running_{false};
+    std::thread worker_thread_;
+
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_srv_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_srv_;
+
 };
 
 int main(int argc, char **argv)
@@ -407,9 +467,7 @@ int main(int argc, char **argv)
     auto node = std::make_shared<PickAndPlaceNode>();
     node->init_moveit();
 
-    // Execute pick and place sequence once
-    node->execute_pick_and_place();
-
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }

@@ -38,6 +38,8 @@ RUN apt-get update && apt-get install -y \
     python3-colcon-common-extensions \
     wget \
     git \
+    ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-cyclonedds \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================

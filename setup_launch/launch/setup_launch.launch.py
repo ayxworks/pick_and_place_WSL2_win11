@@ -100,25 +100,12 @@ def launch_setup(context, *args, **kwargs):
             "enable_depth": "true",
             "enable_infra1": "false",
             "enable_infra2": "false",
-            "depth_module.profile": "640x480x30",
-            "rgb_camera.profile": "640x480x30",
+            "depth_module.profile": "1280x720x30",
+            "rgb_camera.profile": "1280x720x30",
             "align_depth.enable": "true",
             "pointcloud.enable": "true",
             "publish_tf": "true",
         }.items(),
-    )
-
-    # Launch vision pipeline
-    vision_pipeline_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [
-                    FindPackageShare("vision_pipeline"),
-                    "launch",
-                    "vision_node.launch.py",
-                ]
-            )
-        )
     )
 
     
@@ -126,7 +113,6 @@ def launch_setup(context, *args, **kwargs):
         ur_control_launch, 
         moveit_launch,
         realsense_launch,
-        vision_pipeline_launch
     ]
     
     return nodes
