@@ -2,7 +2,7 @@
 
 A complete ROS 2 workspace for operating and controlling a UR10e collaborative robot with Robotiq gripper, integrated vision pipeline, and motion planning for a vision-based pick-and-place task.
 
-## 📋 Overview
+## Overview
 
 This workspace provides:
 - **Robot Control**: UR10e driver and hardware interface
@@ -11,7 +11,7 @@ This workspace provides:
 - **Manipulation**: Pick-and-place application with integrated GUI
 - **Hardware**: Robotiq gripper control and custom camera flange support
 
-## ✅ Prerequisites
+## Prerequisites
 
 - **ROS 2 Humble** installed on your system
 - **Git** installed for cloning repositories
@@ -20,7 +20,7 @@ This workspace provides:
 - **RealSense SDK** ([installation instructions](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md#installing-the-packages))
 - **UR Robot Setup**: Robotiq Gripper URCap **must be uninstalled** from the UR teach pendant before running this workspace
 
-## 📦 Workspace Packages
+## Workspace Packages
 
 | Package | Purpose |
 |---------|---------|
@@ -38,7 +38,7 @@ This workspace provides:
 | `Universal_Robots_ROS2_Driver` | UR robot hardware driver and communication |
 | `Universal_Robots_ROS2_Description` | UR robot URDF and descriptions |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Option A: Docker Setup (Recommended)
 
@@ -79,10 +79,7 @@ source install/setup.bash
 ros2 launch pick_and_place pick_and_placep_launch.launch.py
 ```
 
-
-
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Connection Issues
 - Verify the UR robot IP matches your network: `export UR_ROBOT_IP=<your_ip>`
@@ -115,3 +112,9 @@ pkill -f rclpy
 
 - **Martin Grao** (mgrao@ikerlan.es) - Main development
 - **Mikel Mujika** (mmujika@ikerlan.es) - Vision pipeline and integration
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
+
+You can find the full license text in the `LICENSE` file.

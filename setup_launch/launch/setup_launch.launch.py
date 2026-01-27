@@ -10,15 +10,11 @@ def launch_setup(context, *args, **kwargs):
     
     robot_name = LaunchConfiguration("robot_name", default="ur")
     robot_ip = LaunchConfiguration("robot_ip")
-    use_sim = LaunchConfiguration("use_sim", default="false")
     include_digilab = LaunchConfiguration("include_digilab", default="false")
     controllers_file = LaunchConfiguration("controllers_file", default="ur_controllers.yaml")
     use_cam_flange_support = LaunchConfiguration("use_cam_flange_support", default="false")
 
-    if use_sim.perform(context) == "true":
-        controllers_file = str(controllers_file.perform(context)).replace(".yaml", "_gazebo.yaml")
-
-    # Launch del driver del UR
+    # UR driver launch
     ur_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -55,7 +51,7 @@ def launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
-    # Launch de MoveIt
+    # MoveIt Launch
     moveit_launch = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution(
@@ -82,7 +78,7 @@ def launch_setup(context, *args, **kwargs):
                 }.items(),
             )
     
-    # Launch de RealSense D435
+    # RealSense Launch
     realsense_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
