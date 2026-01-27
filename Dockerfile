@@ -1,11 +1,11 @@
 FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
 
-# Evitar prompts interactivos
+# Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
 
 # ============================================
-# CAPA 1: Sistema base y locales (cambia raramente)
+# LAYER 1: Base system and locales (rarely changes)
 # ============================================
 RUN apt update && apt install -y \
     locales \
@@ -17,7 +17,7 @@ RUN apt update && apt install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================
-# CAPA 2: Instalar ROS2 (cambia raramente)
+# LAYER 2: Install ROS2 (rarely changes)
 # ============================================
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
     -o /usr/share/keyrings/ros-archive-keyring.gpg && \
@@ -29,7 +29,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ============================================
-# CAPA 3: Herramientas del sistema (cambia raramente)
+# LAYER 3: System tools (rarely changes)
 # ============================================
 RUN apt-get update && apt-get install -y \
     python3.10 \
@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================
-# CAPA 4: PyTorch y dependencias pesadas (cambia raramente)
+# LAYER 4: PyTorch and heavy dependencies (rarely changes)
 # ============================================
 RUN pip install --no-cache-dir \
     torch==2.1.0+cu121 \
@@ -57,7 +57,7 @@ COPY ./vision_pipeline/vision_pipeline/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ============================================
-# CAPA 5: librealsense (cambia raramente)
+# LAYER 5: librealsense (rarely changes)
 # ============================================
 RUN mkdir -p /etc/apt/keyrings && \
     curl -sSf https://librealsense.realsenseai.com/Debian/librealsense.pgp \
@@ -71,20 +71,20 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # ============================================
-# CAPA 6: Inicializar rosdep (cambia raramente)
+# LAYER 6: Initialize rosdep (rarely changes)
 # ============================================
 RUN pip install --no-cache-dir -U rosdep && \
     rosdep init && \
     rosdep update
 
 # ============================================
-# CAPA 7: Workspace setup
+# LAYER 7: Workspace setup
 # ============================================
 WORKDIR /ros2_ws
 RUN mkdir -p src/vision_pipeline/vision_pipeline
 
 # ============================================
-# CAPA 8: Build de foundationpose (solo si cambia vision_pipeline)
+# LAYER 8: Build foundationpose (only if vision_pipeline changes)
 # ============================================
 COPY ./vision_pipeline/. src/vision_pipeline/
 
@@ -95,12 +95,12 @@ ENV FORCE_CUDA="1"
 RUN pip3 install --no-cache-dir git+https://github.com/NVlabs/nvdiffrast.git --no-build-isolation
 
 # ============================================
-# CAPA 9: Dependencias externas (solo si cambia dependencies.repos)
+# LAYER 9: External dependencies (only if dependencies.repos changes)
 # ============================================
 COPY dependencies.repos .
 RUN vcs import src < dependencies.repos
 
-# Instalar dependencias de los paquetes externos
+# Install dependencies of external packages
 RUN /bin/bash -c "\
     source /opt/ros/humble/setup.bash && \
     apt update && \
@@ -109,12 +109,12 @@ RUN /bin/bash -c "\
 "
 
 # ============================================
-# CAPA 10: Código fuente (cambia frecuentemente)
+# LAYER 10: Source code (changes frequently)
 # ============================================
-# Copiar el resto del código fuente DESPUÉS de las dependencias
+# Copy the rest of the source code AFTER dependencies
 COPY . src/
 
-# Reinstalar dependencias solo si el código nuevo las requiere
+# Reinstall dependencies only if the new code requires them
 RUN /bin/bash -c "\
     source /opt/ros/humble/setup.bash && \
     apt update && \
@@ -123,12 +123,12 @@ RUN /bin/bash -c "\
 "
 
 # ============================================
-# CAPA 11: Build del workspace
+# LAYER 11: Workspace build
 # ============================================
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build"
 
 # ============================================
-# CAPA 12: Configuración final
+# LAYER 12: Final configuration
 # ============================================
 RUN apt-get update && \
     apt-get remove -y python3-matplotlib && \
