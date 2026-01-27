@@ -15,7 +15,7 @@ class PickPlaceGUI(QMainWindow):
         self.node = node
         self.init_ui()
         
-        # Timer para procesar callbacks de ROS
+        # Timer to process ROS events
         self.ros_timer = QTimer()
         self.ros_timer.timeout.connect(self.spin_ros)
         self.ros_timer.start(100)  # 10 Hz
@@ -24,24 +24,24 @@ class PickPlaceGUI(QMainWindow):
         self.setWindowTitle('Pick & Place Control')
         self.setGeometry(100, 100, 400, 300)
         
-        # Widget central
+        # Central widget and layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
         
-        # Título
+        # Title
         title = QLabel('Pick & Place Controller')
         title.setAlignment(Qt.AlignCenter)
         title.setFont(QFont('Arial', 16, QFont.Bold))
         layout.addWidget(title)
         
-        # Estado
+        # Status label
         self.status_label = QLabel('Status: Ready')
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_label.setFont(QFont('Arial', 12))
         layout.addWidget(self.status_label)
         
-        # Botón START
+        # START button
         self.start_button = QPushButton('START')
         self.start_button.setMinimumHeight(50)
         self.start_button.setStyleSheet("""
@@ -62,7 +62,7 @@ class PickPlaceGUI(QMainWindow):
         self.start_button.clicked.connect(self.call_start)
         layout.addWidget(self.start_button)
         
-        # Botón STOP
+        # STOP button
         self.stop_button = QPushButton('STOP')
         self.stop_button.setMinimumHeight(50)
         self.stop_button.setStyleSheet("""
@@ -84,7 +84,7 @@ class PickPlaceGUI(QMainWindow):
         self.stop_button.setEnabled(False)
         layout.addWidget(self.stop_button)
         
-        # Log de mensajes
+        # Message log
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         self.log_text.setMaximumHeight(100)
@@ -156,11 +156,11 @@ class PickPlaceGUINode(Node):
     def __init__(self):
         super().__init__('pick_place_gui')
         
-        # Crear clientes de servicio
+        # Create service clients
         self.start_client = self.create_client(Trigger, 'start_pick_place')
         self.stop_client = self.create_client(Trigger, 'stop_pick_place')
         
-        # Esperar a que los servicios estén disponibles
+        # Wait for services to be available
         self.get_logger().info('Waiting for services...')
         self.start_client.wait_for_service(timeout_sec=5.0)
         self.stop_client.wait_for_service(timeout_sec=5.0)
@@ -170,18 +170,18 @@ class PickPlaceGUINode(Node):
 def main(args=None):
     rclpy.init(args=args)
     
-    # Crear nodo ROS
+    # Create ROS node
     node = PickPlaceGUINode()
     
-    # Crear aplicación Qt
+    # Create Qt application
     app = QApplication(sys.argv)
     gui = PickPlaceGUI(node)
     gui.show()
     
-    # Ejecutar aplicación
+    # Execute application
     exit_code = app.exec_()
     
-    # Limpiar
+    # Cleanup
     node.destroy_node()
     rclpy.shutdown()
     sys.exit(exit_code)
