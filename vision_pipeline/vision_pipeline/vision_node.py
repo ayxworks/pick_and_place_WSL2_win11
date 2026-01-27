@@ -1,17 +1,19 @@
-# Copyright 2026, IKERLAN S. Coop.
-# Copyright 2026, Industrial Machinery Export Bilbao S.L.
+# -----------------------------------------------------------------------------
+# Copyright © 2026 NVIDIA Corporation
+#
+# This file is part of a software that integrates NVIDIA FoundationPose.
+#
+# FoundationPose and related components are provided under the
+# NVIDIA Source Code License. Use, reproduction, modification, and
+# distribution of this software is governed by the terms of that license.
+# See the LICENSE file in the root of the repository or:
+#
+#   https://github.com/NVlabs/FoundationPose/blob/main/LICENSE
+#
+# Before distributing this software or creating derivative works,
+# ensure that you have read and accepted the NVIDIA Source Code License.
+# -----------------------------------------------------------------------------
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at:
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 
 import sys

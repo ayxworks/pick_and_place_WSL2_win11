@@ -32,7 +32,7 @@ This workspace provides:
 | `vision_pipeline` | Object detection and pose estimation using FoundationPose |
 | `robotiq_controllers` | Robotiq gripper control interface |
 | `robotiq_driver` | Low-level Robotiq gripper communication |
-| `cobra_camera_positioning` | Camera positioning and calibration |
+| `camera_positioning` | Camera positioning and calibration |
 | `cam_flange_support` | Custom camera mount for UR flange |
 | `serial` | Serial communication utilities |
 | `Universal_Robots_ROS2_Driver` | UR robot hardware driver and communication |
