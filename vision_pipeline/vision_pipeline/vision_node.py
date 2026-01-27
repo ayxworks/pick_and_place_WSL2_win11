@@ -44,6 +44,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import TransformStamped
 from cv_bridge import CvBridge
 from scipy.spatial.transform import Rotation as R
+from ultralytics import SAM
 
 
 # ------------------------------------------------------------
@@ -148,6 +149,9 @@ class PoseEstimatorService(Node):
         self.bbox = None
 
         self.window_name = "Pose Estimation"
+
+        # Initialize SAM2 segmentation model
+        self.seg_model = SAM("sam2.1_b.pt")
 
         # Initialize FoundationPose
         self.initialize_foundationpose()
@@ -359,9 +363,17 @@ class PoseEstimatorService(Node):
 
             stamp = self.get_clock().now().to_msg()
 
+            H, W = rgb.shape[:2]
+            color = cv2.resize(rgb, (W, H), interpolation=cv2.INTER_NEAREST)
+            depth = cv2.resize(depth, (W, H), interpolation=cv2.INTER_NEAREST)
+
             # Remove invalid depth values
             depth[(depth < 0.1) | (depth > 3.0)] = 0
             mask = depth > 0
+
+            # Test SAM2
+            res = self.seg_model.predict(color)[0]
+            res.save("masks.png")
 
             # Run pose estimation
             pose = self.pose_estimator.register(

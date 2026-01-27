@@ -44,7 +44,6 @@ def launch_setup(context, *args, **kwargs):
             "tool_rx_idle_chars": "1.5",
             "tool_tx_idle_chars": "3.5",
             "tool_device_name": "/tmp/ttyUR",
-            "use_sim": use_sim,
             "controllers_file": controllers_file,
             "use_cam_flange_support": use_cam_flange_support,
             "include_digilab": include_digilab,
@@ -72,7 +71,6 @@ def launch_setup(context, *args, **kwargs):
                     "moveit_config_package": "setup_moveit_config",
                     "moveit_config_file": "ur.srdf.xacro",
                     "gripper_com_port": "/tmp/ttyUR",
-                    "use_sim_time": use_sim,
                     "use_cam_flange_support": use_cam_flange_support,
                     "include_digilab": include_digilab,
                 }.items(),
@@ -131,14 +129,6 @@ def generate_launch_description():
             default_value="172.16.7.75",
             description="IP del robot UR10e",
         )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'use_sim',
-            default_value='false',
-            description='Start robot in Gazebo Ignition simulation.',
-            choices=["true", "false"],
-        ),
     )
     declared_arguments.append(
         DeclareLaunchArgument(
