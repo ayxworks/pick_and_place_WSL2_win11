@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.join(module_dir, "FoundationPose/learning/models"))
 import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
+from ament_index_python.packages import get_package_share_directory
 from rclpy.executors import MultiThreadedExecutor
 from std_srvs.srv import Trigger
 from threading import Lock
@@ -45,6 +46,8 @@ from geometry_msgs.msg import TransformStamped
 from cv_bridge import CvBridge
 from scipy.spatial.transform import Rotation as R
 from ultralytics import SAM
+import open3d as o3d
+from sklearn.linear_model import RANSACRegressor
 
 
 # ------------------------------------------------------------
@@ -151,7 +154,10 @@ class PoseEstimatorService(Node):
         self.window_name = "Pose Estimation"
 
         # Initialize SAM2 segmentation model
-        self.seg_model = SAM("sam2.1_b.pt")
+        package_share_dir = get_package_share_directory('vision_pipeline')
+        model_path = os.path.join(package_share_dir, 'models', 'sam2.1_b.pt')
+        self.get_logger().info(f"Loading SAM model from: {model_path}")
+        self.seg_model = SAM(model_path)
 
         # Initialize FoundationPose
         self.initialize_foundationpose()
@@ -340,6 +346,51 @@ class PoseEstimatorService(Node):
             if k in (ord("r"), ord("R"), 27):
                 cv2.destroyWindow(self.window_name)
                 return "reject"
+            
+    # --------------------------------------------------------
+    # Plane detection utility
+    # --------------------------------------------------------            
+    def detect_table_plane(self, depth, K, height_threshold=0.02):
+        """
+        Detecta el plano de la mesa y devuelve máscara de objetos sobre ella.
+        
+        Args:
+            depth: imagen de profundidad
+            K: matriz intrínseca de la cámara
+            height_threshold: altura mínima sobre la mesa (metros)
+        
+        Returns:
+            mask: máscara booleana de píxeles sobre la mesa
+        """
+        
+        # Crear nube de puntos desde depth
+        h, w = depth.shape
+        u, v = np.meshgrid(np.arange(w), np.arange(h))
+        
+        # Backproject a 3D
+        z = depth
+        x = (u - K[0, 2]) * z / K[0, 0]
+        y = (v - K[1, 2]) * z / K[1, 1]
+        
+        # Filtrar puntos válidos
+        valid = z > 0
+        points_3d = np.stack([x[valid], y[valid], z[valid]], axis=-1)
+        
+        # RANSAC para detectar plano dominante
+        ransac = RANSACRegressor(residual_threshold=0.01, max_trials=1000)
+        X = points_3d[:, [0, 1]]  # x, y como features
+        y_target = points_3d[:, 2]  # z como target
+        
+        ransac.fit(X, y_target)
+        
+        # Predecir altura del plano en cada píxel
+        plane_z = ransac.predict(np.stack([x, y], axis=-1).reshape(-1, 2))
+        plane_z = plane_z.reshape(h, w)
+        
+        # Máscara: puntos que están "height_threshold" por encima del plano
+        above_plane = (z > 0) & (z < plane_z - height_threshold)
+        
+        return above_plane
 
     # --------------------------------------------------------
     # Service callback
@@ -369,18 +420,132 @@ class PoseEstimatorService(Node):
 
             # Remove invalid depth values
             depth[(depth < 0.1) | (depth > 3.0)] = 0
-            mask = depth > 0
+
+            # above_table_mask = self.detect_table_plane(depth, K, height_threshold=0.02)
+            # color_masked = color.copy()
+            # color_masked[~above_table_mask] = 0
+            # color_masked = color.copy()
+            # color_masked[depth == 0] = 0 
 
             # Test SAM2
             res = self.seg_model.predict(color)[0]
             res.save("masks.png")
+            masks = res.masks.data.cpu().numpy()
+
+            def get_bbox(mask):
+                """Obtiene el bounding box de una máscara binaria"""
+                rows = np.any(mask, axis=1)
+                cols = np.any(mask, axis=0)
+                
+                if not rows.any() or not cols.any():
+                    return None
+                
+                rmin, rmax = np.where(rows)[0][[0, -1]]
+                cmin, cmax = np.where(cols)[0][[0, -1]]
+                
+                return (rmin, rmax, cmin, cmax)  # (y_min, y_max, x_min, x_max)
+
+            def bbox_contains_center(bbox_outer, bbox_inner):
+                """Verifica si el centro del bbox_inner está dentro del bbox_outer"""
+                y_min_out, y_max_out, x_min_out, x_max_out = bbox_outer
+                y_min_in, y_max_in, x_min_in, x_max_in = bbox_inner
+                
+                # Centro del bbox interior
+                center_y = (y_min_in + y_max_in) / 2
+                center_x = (x_min_in + x_max_in) / 2
+                
+                # Verificar si el centro está dentro del bbox exterior
+                return (y_min_out <= center_y <= y_max_out and 
+                        x_min_out <= center_x <= x_max_out)
+
+            # PASO 1: Encontrar la máscara más grande (la mesa)
+            areas = [mask.sum() for mask in masks]
+            largest_idx = np.argmax(areas)
+            table_mask = masks[largest_idx].astype(bool)
+            table_bbox = get_bbox(table_mask)
+
+            if table_bbox is None:
+                self.get_logger().error("No se pudo calcular el bbox de la mesa")
+                return
+
+            # PASO 2: Encontrar máscaras cuyo centro está DENTRO del bbox de la mesa
+            masks_inside_table = []
+            for i, mask in enumerate(masks):
+                if i == largest_idx:  # Saltar la propia mesa
+                    continue
+                
+                mask_bool = mask.astype(bool)
+                mask_bbox = get_bbox(mask_bool)
+                
+                if mask_bbox is None:
+                    continue
+                
+                # Verificar si el centro de esta máscara está dentro del bbox de la mesa
+                if bbox_contains_center(table_bbox, mask_bbox):
+                    mask_area = mask_bool.sum()
+                    masks_inside_table.append((mask_bool, mask_area, mask_bbox))
+
+            # PASO 3: De las máscaras dentro de la mesa, quedarse con la más grande
+            if len(masks_inside_table) > 0:
+                # Ordenar por área y tomar la mayor
+                masks_inside_table.sort(key=lambda x: x[1], reverse=True)
+                object_mask = masks_inside_table[0][0]
+                self.get_logger().info(f"Objeto encontrado con área: {masks_inside_table[0][1]}")
+            else:
+                self.get_logger().warn("No se encontró ningún objeto dentro de la mesa")
+                # Fallback: usar la segunda máscara más grande
+                sorted_indices = np.argsort(areas)[::-1]
+                if len(sorted_indices) > 1:
+                    object_mask = masks[sorted_indices[1]].astype(bool)
+                else:
+                    self.get_logger().error("No hay suficientes máscaras")
+                    return
+            # Combinar con depth válida
+            obj_mask = object_mask & (depth > 0)
+
+            # Debug: guardar ambas máscaras
+            cv2.imwrite("table_mask.png", (table_mask * 255).astype(np.uint8))
+            cv2.imwrite("selected_mask.png", (obj_mask * 255).astype(np.uint8))
+
+            # h, w = masks.shape[1:]
+            # center_y, center_x = h // 2, w // 2
+
+            # best_score = -1
+            # best_mask = None
+
+            # for mask in masks:
+            #     area = mask.sum()
+                
+            #     # Calcular centroide de la máscara
+            #     y_indices, x_indices = np.where(mask)
+            #     if len(y_indices) == 0:
+            #         continue
+                
+            #     centroid_y = y_indices.mean()
+            #     centroid_x = x_indices.mean()
+                
+            #     # Distancia al centro
+            #     dist_to_center = np.sqrt((centroid_x - center_x)**2 + (centroid_y - center_y)**2)
+                
+            #     # Score combinado: área grande + cerca del centro
+            #     score = area / (1 + dist_to_center * 0.01)  # Ajustar peso
+                
+            #     if score > best_score:
+            #         best_score = score
+            #         best_mask = mask
+
+            # sam_mask = best_mask.astype(bool)
+            # obj_mask = sam_mask & (depth > 0)
+
+            # # Save mask for debugging
+            # cv2.imwrite("selected_mask.png", (obj_mask * 255).astype(np.uint8)) 
 
             # Run pose estimation
             pose = self.pose_estimator.register(
                 K=K,
                 rgb=rgb,
                 depth=depth,
-                ob_mask=mask,
+                ob_mask=obj_mask,
                 iteration=self.est_refine_iter,
             )
 

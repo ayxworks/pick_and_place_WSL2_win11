@@ -289,67 +289,116 @@ public:
         return success;
     }
 
-    // Move linearly to a pose using Pilz LIN planner
-    bool move_lin_to_pose(const geometry_msgs::msg::PoseStamped &pose)
-    {
-        set_pilz_lin_planner();
-        arm_->setPoseTarget(pose);
-
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
-        bool success = (arm_->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-
-        if (success)
-        {
-            arm_->execute(plan);
-        }
-        else
-        {
-            RCLCPP_ERROR(this->get_logger(), "PILZ LIN planning failed");
-        }
-
-        arm_->clearPoseTargets();
-        return success;
-    }
-
-    // Applies a relative displacement in the frame of the end-effector
+    // Applies a relative displacement in the frame of the end-effector using Cartesian path
     bool move_relative_to_end_effector(double x, double y, double z)
     {
-        // Obtain the actual pose of the end-effector
+        set_ompl_planner();
+
+        // Get current end-effector pose in planning frame
         geometry_msgs::msg::PoseStamped current_pose;
         current_pose.header.frame_id = arm_->getPlanningFrame();
         current_pose.pose = arm_->getCurrentPose().pose;
 
-        // Create the displacement in the frame of the end-effector
-        geometry_msgs::msg::Vector3Stamped offset;
-        offset.header.frame_id = arm_->getEndEffectorLink();
-        offset.vector.x = x;
-        offset.vector.y = y;
-        offset.vector.z = z;
+        RCLCPP_INFO(this->get_logger(), 
+            "Current EE pose: [%.3f, %.3f, %.3f]",
+            current_pose.pose.position.x,
+            current_pose.pose.position.y,
+            current_pose.pose.position.z);
 
-        // Transform the offset to the planning frame
-        geometry_msgs::msg::Vector3Stamped offset_transformed;
+        // Get transform from planning frame to end-effector frame
+        geometry_msgs::msg::TransformStamped transform;
         try
         {
-            tf_buffer_.transform(offset, offset_transformed, arm_->getPlanningFrame());
+            transform = tf_buffer_.lookupTransform(
+                arm_->getPlanningFrame(),
+                arm_->getEndEffectorLink(),
+                tf2::TimePointZero);
         }
         catch (tf2::TransformException &ex)
         {
-            RCLCPP_ERROR(this->get_logger(), "TF transform failed: %s", ex.what());
+            RCLCPP_ERROR(this->get_logger(), "TF lookup failed: %s", ex.what());
             return false;
         }
 
-        // Apply the offset to the current pose
-        geometry_msgs::msg::PoseStamped target_pose = current_pose;
-        target_pose.pose.position.x += offset_transformed.vector.x;
-        target_pose.pose.position.y += offset_transformed.vector.y;
-        target_pose.pose.position.z += offset_transformed.vector.z;
+        // Create offset vector in end-effector frame
+        geometry_msgs::msg::Vector3Stamped offset_ee;
+        offset_ee.header.frame_id = arm_->getEndEffectorLink();
+        offset_ee.vector.x = x;
+        offset_ee.vector.y = y;
+        offset_ee.vector.z = z;
 
-        return move_lin_to_pose(target_pose);
-    } 
+        // Transform offset to planning frame
+        geometry_msgs::msg::Vector3Stamped offset_world;
+        tf2::doTransform(offset_ee, offset_world, transform);
+
+        RCLCPP_INFO(this->get_logger(), 
+            "Offset in EE frame: [%.3f, %.3f, %.3f] -> World frame: [%.3f, %.3f, %.3f]",
+            x, y, z,
+            offset_world.vector.x,
+            offset_world.vector.y,
+            offset_world.vector.z);
+
+        // Calculate target pose
+        geometry_msgs::msg::Pose target_pose = current_pose.pose;
+        target_pose.position.x += offset_world.vector.x;
+        target_pose.position.y += offset_world.vector.y;
+        target_pose.position.z += offset_world.vector.z;
+
+        RCLCPP_INFO(this->get_logger(), 
+            "Target pose: [%.3f, %.3f, %.3f]",
+            target_pose.position.x,
+            target_pose.position.y,
+            target_pose.position.z);
+
+        // Create waypoints for cartesian path (only target, start is implicit)
+        std::vector<geometry_msgs::msg::Pose> waypoints;
+        waypoints.push_back(target_pose);
+
+        // Compute cartesian path
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        const double eef_step = 0.01;        // 1cm resolution
+        const double jump_threshold = 0.0;   // Disable jump detection
+        
+        double fraction = arm_->computeCartesianPath(
+            waypoints,
+            eef_step,
+            jump_threshold,
+            trajectory);
+
+        // Check if we achieved the full path
+        if (fraction < 0.95)
+        {
+            RCLCPP_ERROR(this->get_logger(), 
+                "Cartesian path only %.1f%% complete - movement not possible",
+                fraction * 100.0);
+            return false;
+        }
+
+        RCLCPP_INFO(this->get_logger(), 
+            "Cartesian path computed: %.1f%% complete, executing...",
+            fraction * 100.0);
+
+        // Execute the trajectory
+        moveit::planning_interface::MoveGroupInterface::Plan plan;
+        plan.trajectory_ = trajectory;
+        
+        bool success = (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
+        
+        if (!success)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Cartesian trajectory execution failed");
+        }
+        else
+        {
+            RCLCPP_INFO(this->get_logger(), "Cartesian movement completed successfully");
+        }
+
+        return success;
+    }
 
     // Pick routine: approach, grasp, and lift
     bool pick(const std::string &target_frame)
-    {
+    {       
         geometry_msgs::msg::PoseStamped pre_pick_pose;
         if (!get_frame_pose(target_frame, pre_pick_pose))
             return false;
@@ -381,9 +430,54 @@ public:
         geometry_msgs::msg::PoseStamped lift_pose = current_pose;
         lift_pose.pose.position.z += lift_distance_;
 
-        if (!move_lin_to_pose(lift_pose)) return false;
+        if (!move_cartesian_to_pose(lift_pose)) return false;
         
         return true;
+    }
+
+    // Move linearly to an absolute pose using Cartesian path
+    bool move_cartesian_to_pose(const geometry_msgs::msg::PoseStamped &pose)
+    {
+        // Create waypoints for cartesian path (only target, start is implicit)
+        std::vector<geometry_msgs::msg::Pose> waypoints;
+        waypoints.push_back(pose.pose);
+
+        // Compute cartesian path
+        moveit_msgs::msg::RobotTrajectory trajectory;
+        const double eef_step = 0.01;        // 1cm resolution
+        const double jump_threshold = 0.0;   // Disable jump detection
+        
+        double fraction = arm_->computeCartesianPath(
+            waypoints,
+            eef_step,
+            jump_threshold,
+            trajectory);
+
+        // Check if we achieved the full path
+        if (fraction < 0.95)
+        {
+            RCLCPP_ERROR(this->get_logger(), 
+                "Cartesian path only %.1f%% complete - movement not possible",
+                fraction * 100.0);
+            return false;
+        }
+
+        RCLCPP_INFO(this->get_logger(), 
+            "Cartesian path computed: %.1f%% complete, executing...",
+            fraction * 100.0);
+
+        // Execute the trajectory
+        moveit::planning_interface::MoveGroupInterface::Plan plan;
+        plan.trajectory_ = trajectory;
+        
+        bool success = (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
+        
+        if (!success)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Cartesian trajectory execution failed");
+        }
+
+        return success;
     }
 
     // Place routine: approach, release, and retreat
@@ -398,10 +492,10 @@ public:
         if (!move_to_pose(pre_place_pose)) return false;
 
         // Relative movement in Z direction of the WORLD to lower the object
-        geometry_msgs::msg::PoseStamped place_pose;
-        pre_place_pose.pose.position.z -= drop_distance_;
+        geometry_msgs::msg::PoseStamped place_pose = pre_place_pose;
+        place_pose.pose.position.z -= drop_distance_;
         RCLCPP_INFO(this->get_logger(), "Lowering object (%.3f m in world Z)", drop_distance_);
-        if (!move_lin_to_pose(place_pose)) return false;
+        if (!move_cartesian_to_pose(place_pose)) return false;
 
         // Open gripper
         if (!move_gripper(gripper_open_position_)) return false;
@@ -420,13 +514,6 @@ public:
     {
         arm_->setPlanningPipelineId("ompl");
         arm_->setPlannerId("RRTConnectkConfigDefault");
-    }
-
-    // Configure Pilz LIN planner
-    void set_pilz_lin_planner()
-    {
-        arm_->setPlanningPipelineId("pilz_industrial_motion_planner");
-        arm_->setPlannerId("LIN");
     }
 
 private:

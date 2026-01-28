@@ -31,6 +31,8 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
+        # Incluir modelo SAM
+        (os.path.join("share", package_name, "models"), glob("vision_pipeline/models/*.pt")),
         # Incluir toda la carpeta weights recursivamente
         *package_files("vision_pipeline/FoundationPose/weights", os.path.join("lib/python3.10/site-packages", package_name, "FoundationPose/weights")),
         # Incluir mycpp

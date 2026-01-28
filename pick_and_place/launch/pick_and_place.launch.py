@@ -20,9 +20,20 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 import os
 
 def generate_launch_description():
+
+    use_sim = LaunchConfiguration("use_sim")
+
+    declare_use_sim = DeclareLaunchArgument(
+        "use_sim",
+        default_value="false",
+        description="Use simulation (Gazebo Ignition)",
+        choices=["true", "false"],
+    )
 
     pkg_share = get_package_share_directory('pick_and_place')
 
@@ -57,7 +68,10 @@ def generate_launch_description():
                 'launch',
                 'setup_launch.launch.py'
             )
-        )
+        ),
+        launch_arguments={
+            "use_sim": use_sim,
+        }.items(),
     )
 
     pick_and_place_gui_node = Node(
@@ -81,6 +95,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        declare_use_sim,
         pick_and_place_node,
         publish_obstacles_launch,
         pick_and_place_gui_node,

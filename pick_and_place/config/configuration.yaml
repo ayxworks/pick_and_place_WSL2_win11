@@ -29,7 +29,7 @@ pick_and_place_node:
 
     # Name of the ROS object detection service (type std_srvs/Trigger)
     # Called from the observation position to update the pick/place frames
-    detect_service_name: "estimate_pose"
+    detect_service_name: "/estimate_pose"
 
     # Distance (in meters) for the final approach movement along the gripper's Z-axis
     # Linear motion from pre_pick_frame toward the object
