@@ -289,36 +289,11 @@ public:
         return success;
     }
 
-    // Applies a relative displacement in the frame of the end-effector using Cartesian path
     bool move_relative_to_end_effector(double x, double y, double z)
     {
-        set_ompl_planner();
-
-        // Get current end-effector pose in planning frame
+        // Obtain current end-effector pose in planning frame
         geometry_msgs::msg::PoseStamped current_pose;
-        current_pose.header.frame_id = arm_->getPlanningFrame();
         current_pose.pose = arm_->getCurrentPose().pose;
-
-        RCLCPP_INFO(this->get_logger(), 
-            "Current EE pose: [%.3f, %.3f, %.3f]",
-            current_pose.pose.position.x,
-            current_pose.pose.position.y,
-            current_pose.pose.position.z);
-
-        // Get transform from planning frame to end-effector frame
-        geometry_msgs::msg::TransformStamped transform;
-        try
-        {
-            transform = tf_buffer_.lookupTransform(
-                arm_->getPlanningFrame(),
-                arm_->getEndEffectorLink(),
-                tf2::TimePointZero);
-        }
-        catch (tf2::TransformException &ex)
-        {
-            RCLCPP_ERROR(this->get_logger(), "TF lookup failed: %s", ex.what());
-            return false;
-        }
 
         // Create offset vector in end-effector frame
         geometry_msgs::msg::Vector3Stamped offset_ee;
@@ -328,73 +303,29 @@ public:
         offset_ee.vector.z = z;
 
         // Transform offset to planning frame
-        geometry_msgs::msg::Vector3Stamped offset_world;
-        tf2::doTransform(offset_ee, offset_world, transform);
+        geometry_msgs::msg::Vector3Stamped offset_planning_frame;
+        try {
+            auto transform = tf_buffer_.lookupTransform(
+                arm_->getPlanningFrame(),
+                arm_->getEndEffectorLink(),
+                tf2::TimePointZero);
 
-        RCLCPP_INFO(this->get_logger(), 
-            "Offset in EE frame: [%.3f, %.3f, %.3f] -> World frame: [%.3f, %.3f, %.3f]",
-            x, y, z,
-            offset_world.vector.x,
-            offset_world.vector.y,
-            offset_world.vector.z);
-
-        // Calculate target pose
-        geometry_msgs::msg::Pose target_pose = current_pose.pose;
-        target_pose.position.x += offset_world.vector.x;
-        target_pose.position.y += offset_world.vector.y;
-        target_pose.position.z += offset_world.vector.z;
-
-        RCLCPP_INFO(this->get_logger(), 
-            "Target pose: [%.3f, %.3f, %.3f]",
-            target_pose.position.x,
-            target_pose.position.y,
-            target_pose.position.z);
-
-        // Create waypoints for cartesian path (only target, start is implicit)
-        std::vector<geometry_msgs::msg::Pose> waypoints;
-        waypoints.push_back(target_pose);
-
-        // Compute cartesian path
-        moveit_msgs::msg::RobotTrajectory trajectory;
-        const double eef_step = 0.01;        // 1cm resolution
-        const double jump_threshold = 0.0;   // Disable jump detection
-        
-        double fraction = arm_->computeCartesianPath(
-            waypoints,
-            eef_step,
-            jump_threshold,
-            trajectory);
-
-        // Check if we achieved the full path
-        if (fraction < 0.95)
-        {
-            RCLCPP_ERROR(this->get_logger(), 
-                "Cartesian path only %.1f%% complete - movement not possible",
-                fraction * 100.0);
+            tf2::doTransform(offset_ee, offset_planning_frame, transform);
+        } catch (tf2::TransformException &ex) {
+            RCLCPP_ERROR(this->get_logger(), "TF lookup failed: %s", ex.what());
             return false;
         }
 
-        RCLCPP_INFO(this->get_logger(), 
-            "Cartesian path computed: %.1f%% complete, executing...",
-            fraction * 100.0);
+        // Calculate target pose by adding offset in planning frame
+        geometry_msgs::msg::PoseStamped target_pose = current_pose;
+        target_pose.pose.position.x += offset_planning_frame.vector.x;
+        target_pose.pose.position.y += offset_planning_frame.vector.y;
+        target_pose.pose.position.z += offset_planning_frame.vector.z;
 
-        // Execute the trajectory
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
-        plan.trajectory_ = trajectory;
-        
-        bool success = (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-        
-        if (!success)
-        {
-            RCLCPP_ERROR(this->get_logger(), "Cartesian trajectory execution failed");
-        }
-        else
-        {
-            RCLCPP_INFO(this->get_logger(), "Cartesian movement completed successfully");
-        }
-
-        return success;
+        // Move to target pose using Cartesian path
+        return move_cartesian_to_pose(target_pose);
     }
+
 
     // Pick routine: approach, grasp, and lift
     bool pick(const std::string &target_frame)
