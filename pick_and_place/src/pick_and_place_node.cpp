@@ -14,8 +14,10 @@ public:
     PickAndPlaceNode()
         : Node("pick_and_place_node",
                rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)),
+          node_(std::make_shared<rclcpp::Node>("pick_and_place_group_node")),
           tf_buffer_(this->get_clock()),
-          tf_listener_(tf_buffer_)
+          tf_listener_(tf_buffer_),
+          executor_(std::make_shared<rclcpp::executors::MultiThreadedExecutor>())
     {
         // Read MoveIt group names and TF frames from parameters
         arm_move_group_ = this->get_parameter("arm_move_group").as_string();
@@ -50,18 +52,17 @@ public:
             std::bind(&PickAndPlaceNode::stop_cb, this,
                     std::placeholders::_1, std::placeholders::_2));
 
-            }
+        RCLCPP_INFO(this->get_logger(), "MoveIt interfaces initialized");
 
-    // Initialize MoveIt MoveGroup interfaces
-    void init_moveit()
-    {
+        executor_->add_node(node_);
+        executor_thread_ = std::thread([this]() { this->executor_->spin(); });
+
         arm_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-            shared_from_this(), arm_move_group_);
+            node_, arm_move_group_);
 
         gripper_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-            shared_from_this(), gripper_move_group_);
+            node_, gripper_move_group_);
 
-        RCLCPP_INFO(this->get_logger(), "MoveIt interfaces initialized");
     }
 
     void start_cb(
@@ -151,20 +152,29 @@ public:
     bool move_to_named_target(const std::string &target_name)
     {
         set_ompl_planner();
+        arm_->setStartStateToCurrentState();
         arm_->setNamedTarget(target_name);
+        
         moveit::planning_interface::MoveGroupInterface::Plan plan;
 
-        bool success = (arm_->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-        if (success)
+        if (arm_->plan(plan) != moveit::core::MoveItErrorCode::SUCCESS)
         {
-            arm_->execute(plan);
-            arm_->clearPoseTargets();
+            RCLCPP_ERROR(this->get_logger(),
+                "Planning failed for named target: %s", target_name.c_str());
+            return false;
         }
-        else
+
+        auto exec_result = arm_->execute(plan);
+        arm_->clearPoseTargets();
+
+        if (exec_result != moveit::core::MoveItErrorCode::SUCCESS)
         {
-            RCLCPP_ERROR(this->get_logger(), "Planning failed for target: %s", target_name.c_str());
+            RCLCPP_ERROR(this->get_logger(),
+                "Execution failed for named target: %s", target_name.c_str());
+            return false;
         }
-        return success;
+
+        return true;
     }
 
     // Main Pick & Place sequence
@@ -175,7 +185,6 @@ public:
 
         try
         {
-            RCLCPP_INFO(this->get_logger(), "Starting pick and place sequence");
 
             // Move to home position
             RCLCPP_INFO(this->get_logger(), "Moving to home position");
@@ -291,9 +300,34 @@ public:
 
     bool move_relative_to_end_effector(double x, double y, double z)
     {
-        // Obtain current end-effector pose in planning frame
+        // Get current end-effector pose in planning frame
         geometry_msgs::msg::PoseStamped current_pose;
-        current_pose.pose = arm_->getCurrentPose().pose;
+
+        try {
+            auto tf = tf_buffer_.lookupTransform(
+                arm_->getPlanningFrame(),      // target frame
+                arm_->getEndEffectorLink(),    // source frame
+                tf2::TimePointZero,
+                tf2::durationFromSec(0.5));
+            
+            current_pose.header = tf.header;
+            current_pose.pose.position.x = tf.transform.translation.x;
+            current_pose.pose.position.y = tf.transform.translation.y;
+            current_pose.pose.position.z = tf.transform.translation.z;
+            current_pose.pose.orientation = tf.transform.rotation;
+
+        } catch (tf2::TransformException &ex) {
+            RCLCPP_ERROR(this->get_logger(),
+                "Failed to get EE pose from TF: %s", ex.what());
+            return false;
+        }
+
+
+        RCLCPP_INFO(this->get_logger(), 
+            "Current EE Pose: [%.3f, %.3f, %.3f]", 
+            current_pose.pose.position.x,
+            current_pose.pose.position.y,
+            current_pose.pose.position.z);
 
         // Create offset vector in end-effector frame
         geometry_msgs::msg::Vector3Stamped offset_ee;
@@ -400,13 +434,16 @@ public:
         // Execute the trajectory
         moveit::planning_interface::MoveGroupInterface::Plan plan;
         plan.trajectory_ = trajectory;
-        
+        arm_->setStartStateToCurrentState();
         bool success = (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
         
         if (!success)
         {
             RCLCPP_ERROR(this->get_logger(), "Cartesian trajectory execution failed");
         }
+
+        // Small delay to ensure stability
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
 
         return success;
     }
@@ -476,6 +513,9 @@ private:
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_srv_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_srv_;
 
+    rclcpp::Node::SharedPtr node_;
+    rclcpp::Executor::SharedPtr executor_;
+    std::thread executor_thread_;
 };
 
 int main(int argc, char **argv)
@@ -483,7 +523,6 @@ int main(int argc, char **argv)
     rclcpp::init(argc, argv);
 
     auto node = std::make_shared<PickAndPlaceNode>();
-    node->init_moveit();
 
     rclcpp::spin(node);
     rclcpp::shutdown();

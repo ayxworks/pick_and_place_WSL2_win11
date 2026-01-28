@@ -96,7 +96,7 @@ class PickPlaceGUI(QMainWindow):
             }
         """)
         self.stop_button.clicked.connect(self.call_stop)
-        self.stop_button.setEnabled(False)
+        # self.stop_button.setEnabled(False)
         layout.addWidget(self.stop_button)
         
         # Message log
@@ -113,7 +113,7 @@ class PickPlaceGUI(QMainWindow):
         self.log_text.append(message)
         
     def call_start(self):
-        self.start_button.setEnabled(False)
+        # self.start_button.setEnabled(False)
         self.status_label.setText('Status: Starting...')
         self.log_message('Calling start service...')
         
@@ -138,7 +138,7 @@ class PickPlaceGUI(QMainWindow):
             self.start_button.setEnabled(True)
             
     def call_stop(self):
-        self.stop_button.setEnabled(False)
+        # self.stop_button.setEnabled(False)
         self.status_label.setText('Status: Stopping...')
         self.log_message('Calling stop service...')
         
