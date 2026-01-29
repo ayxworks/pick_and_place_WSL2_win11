@@ -14,7 +14,7 @@ obstacles:
     type: box
     frame: world
     size: [1.0, 1.0, 0.2]      # x, y, z
-    position: [0.0, 0.0, -0.1]
+    position: [0.0, 0.0, -0.100001]
     orientation: [0.0, 0.0, 0.0, 1.0]
 
   - id: obstacle

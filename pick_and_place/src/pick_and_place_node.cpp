@@ -34,6 +34,24 @@ public:
         place_leave_distance_ = this->get_parameter("place_leave_distance").as_double();
         lift_distance_ = this->get_parameter("lift_distance").as_double();
         drop_distance_ = this->get_parameter("drop_distance").as_double();
+        try {
+            object_id_ = this->get_parameter("object_id").as_string();
+        } catch (const rclcpp::exceptions::ParameterNotDeclaredException &) {
+            object_id_ = "picked_object";
+            RCLCPP_INFO(this->get_logger(), "Using default object_id: %s", object_id_.c_str());
+        }
+
+        try {
+            object_dimensions_.push_back(this->get_parameter("object_length").as_double());
+            object_dimensions_.push_back(this->get_parameter("object_width").as_double());
+            object_dimensions_.push_back(this->get_parameter("object_height").as_double());
+        } catch (const rclcpp::exceptions::ParameterNotDeclaredException &) {
+            // Default dimensions: 5cm x 5cm x 10cm
+            object_dimensions_ = {0.05, 0.05, 0.10};
+            RCLCPP_INFO(this->get_logger(), 
+                "Using default object dimensions: %.3f x %.3f x %.3f m",
+                object_dimensions_[0], object_dimensions_[1], object_dimensions_[2]);
+        }
 
         // Read object detection service name
         detect_service_name_ = this->get_parameter("detect_service_name").as_string();
@@ -62,6 +80,9 @@ public:
 
         gripper_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
             node_, gripper_move_group_);
+
+        planning_scene_ = std::make_shared<moveit::planning_interface::PlanningSceneInterface>();
+
 
     }
 
@@ -108,6 +129,68 @@ public:
 
         res->success = true;
         res->message = "Pick & Place stopped";
+    }
+
+    // Attach collision object to the planning scene and to the end-effector
+    bool attach_collision_object()
+    {
+        // Create collision object
+        moveit_msgs::msg::CollisionObject collision_object;
+        collision_object.id = object_id_;
+        collision_object.header.frame_id = arm_->getEndEffectorLink();
+
+        // Define box primitive
+        shape_msgs::msg::SolidPrimitive primitive;
+        primitive.type = primitive.BOX;
+        primitive.dimensions.resize(3);
+        primitive.dimensions[0] = object_dimensions_[0]; // length (x)
+        primitive.dimensions[1] = object_dimensions_[1]; // width (y)
+        primitive.dimensions[2] = object_dimensions_[2]; // height (z)
+
+        // Pose of the object relative to end-effector
+        geometry_msgs::msg::Pose object_pose;
+        object_pose.orientation.w = 1.0;
+        object_pose.position.x = 0.0;
+        object_pose.position.y = 0.0;
+        object_pose.position.z = object_dimensions_[2] / 2.0; // Centro del objeto
+
+        collision_object.primitives.push_back(primitive);
+        collision_object.primitive_poses.push_back(object_pose);
+        collision_object.operation = collision_object.ADD;
+
+        // Add to planning scene
+        std::vector<moveit_msgs::msg::CollisionObject> collision_objects;
+        collision_objects.push_back(collision_object);
+        planning_scene_->addCollisionObjects(collision_objects);
+
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+        // Attach to end-effector
+        std::vector<std::string> touch_links;
+        // Add relevant touch links
+        touch_links.push_back(arm_->getEndEffectorLink());
+        touch_links.push_back("left_inner_finger_pad");
+        touch_links.push_back("right_inner_finger_pad");
+        arm_->attachObject(object_id_, arm_->getEndEffectorLink(), touch_links);
+
+        RCLCPP_INFO(this->get_logger(), "Object '%s' attached to end-effector", object_id_.c_str());
+        return true;
+    }
+
+    // Detach and remove collision object from the planning scene
+    bool detach_collision_object()
+    {
+        arm_->detachObject(object_id_);
+        
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
+        
+        // Remove from planning scene
+        std::vector<std::string> object_ids;
+        object_ids.push_back(object_id_);
+        planning_scene_->removeCollisionObjects(object_ids);
+
+        RCLCPP_INFO(this->get_logger(), "Object '%s' detached and removed", object_id_.c_str());
+        return true;
     }
 
 
@@ -375,6 +458,9 @@ public:
         RCLCPP_INFO(this->get_logger(), "Closing gripper");
         if (!move_gripper(gripper_closed_position_)) return false;
 
+        // Attach collision object to the gripper
+        if (!attach_collision_object()) return false;
+
         // Lift object - movement in Z direction of WORLD frame
         RCLCPP_INFO(this->get_logger(), "Lifting object (%.3f m in world Z)", lift_distance_);
 
@@ -457,6 +543,9 @@ public:
         RCLCPP_INFO(this->get_logger(), "Lowering object (%.3f m in world Z)", drop_distance_);
         if (!move_cartesian_to_pose(place_pose)) return false;
 
+        // Detach collision object from the gripper
+        if (!detach_collision_object()) return false;
+
         // Open gripper
         if (!move_gripper(gripper_open_position_)) return false;
 
@@ -477,13 +566,18 @@ public:
     }
 
 private:
+    rclcpp::Node::SharedPtr node_;
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
-
+    rclcpp::Executor::SharedPtr executor_;
+    
     std::shared_ptr<moveit::planning_interface::MoveGroupInterface> arm_;
     std::shared_ptr<moveit::planning_interface::MoveGroupInterface> gripper_;
+    std::shared_ptr<moveit::planning_interface::PlanningSceneInterface> planning_scene_;
 
     rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr detect_client_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_srv_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_srv_;
 
     std::string arm_move_group_;
     std::string gripper_move_group_;
@@ -494,19 +588,16 @@ private:
     std::string gripper_open_position_;
     std::string gripper_closed_position_;
     std::string detect_service_name_;
+    std::string object_id_;
+    
     double pick_approach_distance_;
     double place_leave_distance_;
     double lift_distance_;
     double drop_distance_;
-
+    
+    std::vector<double> object_dimensions_;
     std::atomic_bool running_{false};
     std::thread worker_thread_;
-
-    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_srv_;
-    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_srv_;
-
-    rclcpp::Node::SharedPtr node_;
-    rclcpp::Executor::SharedPtr executor_;
     std::thread executor_thread_;
 };
 
