@@ -20,7 +20,7 @@ services:
       - /dev/bus/usb:/dev/bus/usb
     environment:
       - DISPLAY=${DISPLAY}
-      - ROS_DOMAIN_ID=0
+      - ROS_DOMAIN_ID=7
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix

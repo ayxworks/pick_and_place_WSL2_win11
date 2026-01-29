@@ -108,7 +108,7 @@
     <xacro:property name="ur_to_robotiq_adapter_parent" value="cam_flange_ring_mounting" />
     <xacro:include filename="$(find cam_flange_support)/urdf/cam_flange_support_macro.urdf.xacro" />
     <xacro:cam_flange_support parent="tool0" >
-      <origin xyz="0 0 0" rpy="0 0 ${pi}" /> 
+      <origin xyz="0 0 0" rpy="0 0 0" /> 
     </xacro:cam_flange_support>
   </xacro:if>
 
@@ -151,8 +151,10 @@
   <!-- Realsense D435 Camera -->
 
   <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
-    <origin xyz="-1.209944 0.231354 0.232905" rpy="0.002605 0.729241 0.762238"/>
+    <origin xyz="-1.090329 0.318755 0.635220" rpy="-0.015609 0.316050 0.494161"/>
   </xacro:sensor_d435>
+
+  <!-- ADDITIONAL FRAMES -->
 
   <!-- Calibration Frame-->
   <link name="charuco_board"/>
@@ -161,5 +163,14 @@
     <parent link="robotiq_base_link"/>
     <child link="charuco_board"/>
     <origin xyz="-0.15 0 0.15" rpy="0 0 -1.5708"/>
+  </joint>
+
+  <!-- Place Frame -->
+  <link name="object_place"/>
+
+  <joint name="object_place_joint" type="fixed">
+    <parent link="world"/>
+    <child link="object_place"/>
+    <origin xyz="-0.220 0.587 0.152" rpy="-3.083 0.018 -1.727"/>
   </joint>
 </robot>

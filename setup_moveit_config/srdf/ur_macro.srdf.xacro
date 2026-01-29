@@ -39,12 +39,12 @@
       <joint name="${prefix}wrist_3_joint" value="-0.11" />
     </group_state>
     <group_state name="${prefix}observation" group="${prefix}${name}_manipulator">
-      <joint name="${prefix}elbow_joint" value="-1.8814754486083984" />
-      <joint name="${prefix}shoulder_lift_joint" value="-1.6091319523253382" />
-      <joint name="${prefix}shoulder_pan_joint" value="6.053856372833252" />
-      <joint name="${prefix}wrist_1_joint" value="-0.9247403305820008" />
-      <joint name="${prefix}wrist_2_joint" value="1.6628847122192383" />
-      <joint name="${prefix}wrist_3_joint" value="2.8549625873565674" />
+      <joint name="${prefix}elbow_joint" value="-1.6927485466003418" />
+      <joint name="${prefix}shoulder_lift_joint" value="-1.4086332035115738" />
+      <joint name="${prefix}shoulder_pan_joint" value="-0.604955021535055" />
+      <joint name="${prefix}wrist_1_joint" value="5.252929734974661" />
+      <joint name="${prefix}wrist_2_joint" value="-4.3677746693240564" />
+      <joint name="${prefix}wrist_3_joint" value="-3.6066013018237513" />
     </group_state>
     <group name="gripper">
       <joint name="finger_joint"/>

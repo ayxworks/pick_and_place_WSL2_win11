@@ -8,11 +8,11 @@ pick_and_place_node:
 
     # TF frame that defines the pre-approach position for picking
     # The robot will move to this frame before performing the final approach
-    pre_pick_frame: "frame_pick"
+    pre_pick_frame: "object_pick"
 
     # TF frame that defines the pre-approach position for placing
     # The robot will move to this frame before depositing the object
-    pre_place_frame: "frame_place"
+    pre_place_frame: "object_place"
 
     # Name of the joint configuration saved in MoveIt for the home/rest position
     home_position: "home"
@@ -46,3 +46,9 @@ pick_and_place_node:
     # Distance (in meters) to lower the object before releasing it
     # Movement along the world's Z-axis before opening the gripper (if implemented)
     drop_distance: 0.10
+
+    # Collision object parameters
+    object_id: "picked_object"
+    object_length: 0.05  # metros (x)
+    object_width: 0.05   # metros (y)
+    object_height: 0.10  # metros (z)

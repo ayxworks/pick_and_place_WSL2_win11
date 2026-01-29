@@ -135,7 +135,6 @@ private:
     shapes::ShapeMsg shape_msg;
     shapes::constructMsgFromShape(mesh, shape_msg);
 
-    // ⚠️ CLAVE: boost::get
     shape_msgs::msg::Mesh mesh_msg =
       boost::get<shape_msgs::msg::Mesh>(shape_msg);
 

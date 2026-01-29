@@ -3,6 +3,7 @@ pose_estimator_service:
     # Name of the object frame (will be published as TF)
     # This frame represents the estimated 6D pose of the object
     object_frame: "object"
+    object_frame_pick: "object_pick"
 
     # Path to the object's mesh file (.obj, .stl, etc.)
     # This mesh is used as the 3D reference model for pose estimation
@@ -33,16 +34,16 @@ pose_estimator_service:
     position_offset:
       x: 0.0
       y: 0.0
-      z: 0.0
+      z: 0.1
 
-    # Orientation offsets (in degrees)
+    # Orientation offsets (in radians)
     # These offsets allow aligning the object's coordinate system
     # with the robot gripper's coordinate system
     # For example, if the object's Z axis does not match the gripper's approach Z axis
     orientation_offset:
-      roll: 0.0 # Rotation around the X axis (in degrees)
-      pitch: 0.0 # Rotation around the Y axis (in degrees)
-      yaw: 0.0 # Rotation around the Z axis (in degrees)
+      roll: 3.14159 # Rotation around the X axis (in radians)
+      pitch: 0.0 # Rotation around the Y axis (in radians)
+      yaw: 1.5708 # Rotation around the Z axis (in radians)
 
     # FoundationPose estimation parameters
     estimation_params:

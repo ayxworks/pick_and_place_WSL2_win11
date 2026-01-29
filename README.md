@@ -40,10 +40,6 @@ This workspace provides:
 
 ## Quick Start
 
-### Option A: Docker Setup (Recommended)
-
-Easiest option with all dependencies pre-configured:
-
 ```bash
 # 1. Clone or navigate to the workspace
 cd eurobots_ws
@@ -55,28 +51,6 @@ xhost +local:docker
 docker-compose up --build
 ```
 
-### Option B: Native Installation
-
-For development or systems without Docker:
-
-```bash
-# 1. Create/navigate to workspace
-cd ~/eurobots_ws
-
-# 2. Clone dependencies
-vcs import src < src/dependencies.repos
-
-# 3. Install ROS dependencies
-rosdep install --from-paths src --ignore-src -r -y
-
-# 4. Build the workspace
-colcon build --symlink-install
-
-# 5. Source the environment
-source install/setup.bash
-
-# 6. Launch the Pick-and-Place task
-ros2 launch pick_and_place pick_and_placep_launch.launch.py
 ```
 
 ## Troubleshooting

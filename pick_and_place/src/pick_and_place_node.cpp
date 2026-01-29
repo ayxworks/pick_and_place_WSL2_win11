@@ -101,6 +101,11 @@ public:
         arm_->stop();
         gripper_->stop();
 
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+        arm_->clearPoseTargets();
+        gripper_->clearPoseTargets();
+
         res->success = true;
         res->message = "Pick & Place stopped";
     }
@@ -125,27 +130,21 @@ public:
         // Send request asynchronously
         auto future = detect_client_->async_send_request(request);
 
-        // Block until response is received
-        if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), future) ==
-            rclcpp::FutureReturnCode::SUCCESS)
+        future.wait();
+
+        auto response = future.get();
+
+        if (response->success)
         {
-            auto response = future.get();
-            if (response->success)
-            {
-                RCLCPP_INFO(this->get_logger(), "Detection successful: %s", response->message.c_str());
-                return true;
-            }
-            else
-            {
-                RCLCPP_WARN(this->get_logger(), "Detection failed: %s", response->message.c_str());
-                return false;
-            }
+            RCLCPP_INFO(this->get_logger(), "Detection successful: %s", response->message.c_str());
+            return true;
         }
         else
         {
-            RCLCPP_ERROR(this->get_logger(), "Failed to call detection service");
+            RCLCPP_WARN(this->get_logger(), "Detection failed: %s", response->message.c_str());
             return false;
         }
+
     }
 
     // Move the arm to a named joint configuration in MoveIt
@@ -194,7 +193,7 @@ public:
                 return;
             }
 
-            // Move to observation pose
+            // Move to observation position
             RCLCPP_INFO(this->get_logger(), "Moving to observation position");
             if (!move_to_named_target(observation_position_) || !running_)
             {
@@ -222,10 +221,6 @@ public:
                 RCLCPP_ERROR(this->get_logger(), "Place failed, aborting");
                 return;
             }
-
-            // Return to home position
-            RCLCPP_INFO(this->get_logger(), "Returning to home position");
-            move_to_named_target(home_position_);
 
             RCLCPP_INFO(this->get_logger(), "Pick and place sequence completed successfully");
         }
@@ -322,13 +317,6 @@ public:
             return false;
         }
 
-
-        RCLCPP_INFO(this->get_logger(), 
-            "Current EE Pose: [%.3f, %.3f, %.3f]", 
-            current_pose.pose.position.x,
-            current_pose.pose.position.y,
-            current_pose.pose.position.z);
-
         // Create offset vector in end-effector frame
         geometry_msgs::msg::Vector3Stamped offset_ee;
         offset_ee.header.frame_id = arm_->getEndEffectorLink();
@@ -355,9 +343,13 @@ public:
         target_pose.pose.position.x += offset_planning_frame.vector.x;
         target_pose.pose.position.y += offset_planning_frame.vector.y;
         target_pose.pose.position.z += offset_planning_frame.vector.z;
+        
+        arm_->setMaxVelocityScalingFactor(0.1);
+        arm_->setMaxAccelerationScalingFactor(0.1);
 
-        // Move to target pose using Cartesian path
-        return move_cartesian_to_pose(target_pose);
+        bool success = move_cartesian_to_pose(target_pose);
+
+        return success;
     }
 
 

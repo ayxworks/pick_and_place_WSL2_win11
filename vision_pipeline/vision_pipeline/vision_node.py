@@ -101,6 +101,7 @@ class PoseEstimatorService(Node):
         # Load ROS parameters
         # ----------------------------------------------------
         self.object_frame = self.get_parameter("object_frame").value
+        self.object_frame_pick = self.get_parameter("object_frame_pick").value
         self.mesh_file = self.get_parameter("mesh_file").value
         self.rgb_topic = self.get_parameter("rgb_topic").value
         self.depth_topic = self.get_parameter("depth_topic").value
@@ -267,15 +268,73 @@ class PoseEstimatorService(Node):
         T[:3, 3] = t
 
         return pose @ T
+    
+    def enforce_positive_z(self, pose):
+        """
+        Forces object Z axis to be in the positive half-space
+        with respect to the camera/world Z axis.
+        """
+        R_obj = pose[:3, :3]
+        t = pose[:3, 3]
 
-    def publish_tf(self, pose, stamp):
+        z_obj = R_obj[:, 2]            # Z axis of the object
+        z_world = np.array([0, 0, -1])  # Camera/world Z axis
+
+        # If Z points downwards, flip the object 180 degrees
+        if np.dot(z_obj, z_world) < 0:
+            # Rotate 180° around X axis (can also use Y)
+            R_flip = R.from_euler("x", np.pi).as_matrix()
+            R_obj = R_obj @ R_flip
+
+        pose_fixed = np.eye(4)
+        pose_fixed[:3, :3] = R_obj
+        pose_fixed[:3, 3] = t
+
+        return pose_fixed
+    
+    def enforce_x_towards_camera(self, pose):
+        """
+        Forces the object X axis to point as close as possible
+        to the object-to-camera direction, allowing only 90° rotations.
+        """
+        R_obj = pose[:3, :3]
+        t = pose[:3, 3]
+
+        # Direction from object to camera
+        v_cam = -t
+        v_cam /= np.linalg.norm(v_cam)
+
+        # Candidate rotations: multiples of 90° around Z
+        angles = [0, np.pi/2, np.pi, 3*np.pi/2]
+        best_score = -np.inf
+        best_R = R_obj
+
+        for a in angles:
+            Rz = R.from_euler("z", a).as_matrix()
+            R_candidate = R_obj @ Rz
+
+            x_axis = R_candidate[:, 0]
+            score = np.dot(x_axis, v_cam)
+
+            if score > best_score:
+                best_score = score
+                best_R = R_candidate
+
+        pose_fixed = np.eye(4)
+        pose_fixed[:3, :3] = best_R
+        pose_fixed[:3, 3] = t
+
+        return pose_fixed
+
+
+    def publish_tf(self, pose, stamp, child_frame):
         """
         Publishes the pose as a static TF transform.
         """
         t = TransformStamped()
         t.header.stamp = stamp
         t.header.frame_id = self.camera_frame
-        t.child_frame_id = self.object_frame
+        t.child_frame_id = child_frame
 
         t.transform.translation.x = pose[0, 3]
         t.transform.translation.y = pose[1, 3]
@@ -339,12 +398,14 @@ class PoseEstimatorService(Node):
             k = cv2.waitKey(100) & 0xFF
 
             if k in (ord("a"), ord("A")):
-                cv2.destroyWindow(self.window_name)
+                cv2.destroyAllWindows()
+                cv2.waitKey(1)
                 return "accept"
             if k in (ord("n"), ord("N")):
                 return "retry"
             if k in (ord("r"), ord("R"), 27):
-                cv2.destroyWindow(self.window_name)
+                cv2.destroyAllWindows()
+                cv2.waitKey(1)
                 return "reject"
             
     # --------------------------------------------------------
@@ -352,42 +413,42 @@ class PoseEstimatorService(Node):
     # --------------------------------------------------------            
     def detect_table_plane(self, depth, K, height_threshold=0.02):
         """
-        Detecta el plano de la mesa y devuelve máscara de objetos sobre ella.
+        Detects the table plane and returns mask of objects above it.
         
         Args:
-            depth: imagen de profundidad
-            K: matriz intrínseca de la cámara
-            height_threshold: altura mínima sobre la mesa (metros)
+            depth: depth image
+            K: camera intrinsic matrix
+            height_threshold: minimum height above table (meters)
         
         Returns:
-            mask: máscara booleana de píxeles sobre la mesa
+            mask: boolean mask of pixels above the table
         """
         
-        # Crear nube de puntos desde depth
+        # Create point cloud from depth
         h, w = depth.shape
         u, v = np.meshgrid(np.arange(w), np.arange(h))
         
-        # Backproject a 3D
+        # Backproject to 3D
         z = depth
         x = (u - K[0, 2]) * z / K[0, 0]
         y = (v - K[1, 2]) * z / K[1, 1]
         
-        # Filtrar puntos válidos
+        # Filter valid points
         valid = z > 0
         points_3d = np.stack([x[valid], y[valid], z[valid]], axis=-1)
         
-        # RANSAC para detectar plano dominante
+        # RANSAC to detect dominant plane
         ransac = RANSACRegressor(residual_threshold=0.01, max_trials=1000)
-        X = points_3d[:, [0, 1]]  # x, y como features
-        y_target = points_3d[:, 2]  # z como target
+        X = points_3d[:, [0, 1]]  # x, y as features
+        y_target = points_3d[:, 2]  # z as target
         
         ransac.fit(X, y_target)
         
-        # Predecir altura del plano en cada píxel
+        # Predict plane height at each pixel
         plane_z = ransac.predict(np.stack([x, y], axis=-1).reshape(-1, 2))
         plane_z = plane_z.reshape(h, w)
         
-        # Máscara: puntos que están "height_threshold" por encima del plano
+        # Mask: points that are "height_threshold" above the plane
         above_plane = (z > 0) & (z < plane_z - height_threshold)
         
         return above_plane
@@ -433,7 +494,7 @@ class PoseEstimatorService(Node):
             masks = res.masks.data.cpu().numpy()
 
             def get_bbox(mask):
-                """Obtiene el bounding box de una máscara binaria"""
+                """Gets the bounding box of a binary mask"""
                 rows = np.any(mask, axis=1)
                 cols = np.any(mask, axis=0)
                 
@@ -446,32 +507,32 @@ class PoseEstimatorService(Node):
                 return (rmin, rmax, cmin, cmax)  # (y_min, y_max, x_min, x_max)
 
             def bbox_contains_center(bbox_outer, bbox_inner):
-                """Verifica si el centro del bbox_inner está dentro del bbox_outer"""
+                """Checks if the center of bbox_inner is inside bbox_outer"""
                 y_min_out, y_max_out, x_min_out, x_max_out = bbox_outer
                 y_min_in, y_max_in, x_min_in, x_max_in = bbox_inner
                 
-                # Centro del bbox interior
+                # Center of inner bbox
                 center_y = (y_min_in + y_max_in) / 2
                 center_x = (x_min_in + x_max_in) / 2
                 
-                # Verificar si el centro está dentro del bbox exterior
+                # Check if center is inside outer bbox
                 return (y_min_out <= center_y <= y_max_out and 
                         x_min_out <= center_x <= x_max_out)
 
-            # PASO 1: Encontrar la máscara más grande (la mesa)
+            # STEP 1: Find the largest mask (the table)
             areas = [mask.sum() for mask in masks]
             largest_idx = np.argmax(areas)
             table_mask = masks[largest_idx].astype(bool)
             table_bbox = get_bbox(table_mask)
 
             if table_bbox is None:
-                self.get_logger().error("No se pudo calcular el bbox de la mesa")
+                self.get_logger().error("Could not calculate table bbox")
                 return
 
-            # PASO 2: Encontrar máscaras cuyo centro está DENTRO del bbox de la mesa
+            # STEP 2: Find masks whose center is INSIDE the table bbox
             masks_inside_table = []
             for i, mask in enumerate(masks):
-                if i == largest_idx:  # Saltar la propia mesa
+                if i == largest_idx:  # Skip the table itself
                     continue
                 
                 mask_bool = mask.astype(bool)
@@ -480,30 +541,30 @@ class PoseEstimatorService(Node):
                 if mask_bbox is None:
                     continue
                 
-                # Verificar si el centro de esta máscara está dentro del bbox de la mesa
+                # Check if this mask's center is inside the table bbox
                 if bbox_contains_center(table_bbox, mask_bbox):
                     mask_area = mask_bool.sum()
                     masks_inside_table.append((mask_bool, mask_area, mask_bbox))
 
-            # PASO 3: De las máscaras dentro de la mesa, quedarse con la más grande
+            # STEP 3: From masks inside the table, keep the largest one
             if len(masks_inside_table) > 0:
-                # Ordenar por área y tomar la mayor
+                # Sort by area and take the largest
                 masks_inside_table.sort(key=lambda x: x[1], reverse=True)
                 object_mask = masks_inside_table[0][0]
-                self.get_logger().info(f"Objeto encontrado con área: {masks_inside_table[0][1]}")
+                self.get_logger().info(f"Object found with area: {masks_inside_table[0][1]}")
             else:
-                self.get_logger().warn("No se encontró ningún objeto dentro de la mesa")
-                # Fallback: usar la segunda máscara más grande
+                self.get_logger().warn("No object found inside the table")
+                # Fallback: use the second largest mask
                 sorted_indices = np.argsort(areas)[::-1]
                 if len(sorted_indices) > 1:
                     object_mask = masks[sorted_indices[1]].astype(bool)
                 else:
-                    self.get_logger().error("No hay suficientes máscaras")
+                    self.get_logger().error("Not enough masks")
                     return
-            # Combinar con depth válida
+            # Combine with valid depth
             obj_mask = object_mask & (depth > 0)
 
-            # Debug: guardar ambas máscaras
+            # Debug: save both masks
             cv2.imwrite("table_mask.png", (table_mask * 255).astype(np.uint8))
             cv2.imwrite("selected_mask.png", (obj_mask * 255).astype(np.uint8))
 
@@ -516,7 +577,7 @@ class PoseEstimatorService(Node):
             # for mask in masks:
             #     area = mask.sum()
                 
-            #     # Calcular centroide de la máscara
+            #     # Calculate mask centroid
             #     y_indices, x_indices = np.where(mask)
             #     if len(y_indices) == 0:
             #         continue
@@ -524,11 +585,11 @@ class PoseEstimatorService(Node):
             #     centroid_y = y_indices.mean()
             #     centroid_x = x_indices.mean()
                 
-            #     # Distancia al centro
+            #     # Distance to center
             #     dist_to_center = np.sqrt((centroid_x - center_x)**2 + (centroid_y - center_y)**2)
                 
-            #     # Score combinado: área grande + cerca del centro
-            #     score = area / (1 + dist_to_center * 0.01)  # Ajustar peso
+            #     # Combined score: large area + close to center
+            #     score = area / (1 + dist_to_center * 0.01)  # Adjust weight
                 
             #     if score > best_score:
             #         best_score = score
@@ -551,7 +612,12 @@ class PoseEstimatorService(Node):
 
             # Center pose and apply offsets
             center_pose = pose @ np.linalg.inv(self.to_origin)
+            center_pose = self.enforce_positive_z(center_pose)
+            center_pose = self.enforce_x_towards_camera(center_pose)
             pose_with_offset = self.apply_offsets(center_pose)
+
+            self.publish_tf(center_pose, stamp, self.object_frame)
+            self.publish_tf(pose_with_offset, stamp, self.object_frame_pick)
 
             # Visualization
             vis = draw_posed_3d_box(
@@ -564,7 +630,6 @@ class PoseEstimatorService(Node):
                 continue
 
             if decision == "accept":
-                self.publish_tf(pose_with_offset, stamp)
                 response.success = True
                 response.message = "Pose accepted"
                 return response
