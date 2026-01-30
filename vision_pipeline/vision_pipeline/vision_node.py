@@ -33,7 +33,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
 from ament_index_python.packages import get_package_share_directory
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import SingleThreadedExecutor
 from std_srvs.srv import Trigger
 from threading import Lock
 import tf2_ros
@@ -385,12 +385,14 @@ class PoseEstimatorService(Node):
         )
         return img
 
+
     def wait_for_user_decision(self, image):
         """
         Displays the visualization and waits for
         user keyboard input.
         """
         img = self.add_buttons_to_image(image)
+
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
         while True:
@@ -398,13 +400,13 @@ class PoseEstimatorService(Node):
             k = cv2.waitKey(100) & 0xFF
 
             if k in (ord("a"), ord("A")):
-                cv2.destroyAllWindows()
+                cv2.destroyWindow(self.window_name)
                 cv2.waitKey(1)
                 return "accept"
             if k in (ord("n"), ord("N")):
                 return "retry"
             if k in (ord("r"), ord("R"), 27):
-                cv2.destroyAllWindows()
+                cv2.destroyWindow(self.window_name)
                 cv2.waitKey(1)
                 return "reject"
             
@@ -646,7 +648,7 @@ def main():
     rclpy.init()
     node = PoseEstimatorService()
 
-    executor = MultiThreadedExecutor(num_threads=4)
+    executor = SingleThreadedExecutor()
     executor.add_node(node)
 
     try:
