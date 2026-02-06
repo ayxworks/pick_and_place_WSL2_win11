@@ -38,7 +38,7 @@ This workspace provides:
 | `Universal_Robots_ROS2_Description` | UR robot URDF and descriptions |
 ## Configuration and Setup
 ### Camera Positioning
-To position the camera, you first need a printed DICT_4X4 ChArUco board placed in a known and fixed location.
+To position the camera, you first need a printed DICT_4X4 ChArUco board placed in a known and fixed location visible by the camera.
 
 Adjust the pose of the board in `setup_description/urdf/robot.urdf.xacro`:
 
@@ -64,7 +64,7 @@ docker exec -it pick_and_place bash
 Run the camera positioning algorithm:
 
 ```bash
-ros2 run cobra_camera_positioning diamond_detector --ros-args -p camera_topic:=/camera/color/image_raw -p board_length:=0.225 -p camera_base_frame:=camera_link -p base_frame:=base_link -p board_frame:=charuco_board
+ros2 run camera_positioning diamond_detector --ros-args -p camera_topic:=/camera/color/image_raw -p board_length:=0.225 -p camera_base_frame:=camera_link -p base_frame:=base_link -p board_frame:=charuco_board
 ```
 
 NOTE: Adjust board_length to match the actual size of your ChArUco board.
