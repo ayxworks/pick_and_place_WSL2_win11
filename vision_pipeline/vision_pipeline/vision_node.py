@@ -409,51 +409,6 @@ class PoseEstimatorService(Node):
                 cv2.destroyWindow(self.window_name)
                 cv2.waitKey(1)
                 return "reject"
-            
-    # --------------------------------------------------------
-    # Plane detection utility
-    # --------------------------------------------------------            
-    def detect_table_plane(self, depth, K, height_threshold=0.02):
-        """
-        Detects the table plane and returns mask of objects above it.
-        
-        Args:
-            depth: depth image
-            K: camera intrinsic matrix
-            height_threshold: minimum height above table (meters)
-        
-        Returns:
-            mask: boolean mask of pixels above the table
-        """
-        
-        # Create point cloud from depth
-        h, w = depth.shape
-        u, v = np.meshgrid(np.arange(w), np.arange(h))
-        
-        # Backproject to 3D
-        z = depth
-        x = (u - K[0, 2]) * z / K[0, 0]
-        y = (v - K[1, 2]) * z / K[1, 1]
-        
-        # Filter valid points
-        valid = z > 0
-        points_3d = np.stack([x[valid], y[valid], z[valid]], axis=-1)
-        
-        # RANSAC to detect dominant plane
-        ransac = RANSACRegressor(residual_threshold=0.01, max_trials=1000)
-        X = points_3d[:, [0, 1]]  # x, y as features
-        y_target = points_3d[:, 2]  # z as target
-        
-        ransac.fit(X, y_target)
-        
-        # Predict plane height at each pixel
-        plane_z = ransac.predict(np.stack([x, y], axis=-1).reshape(-1, 2))
-        plane_z = plane_z.reshape(h, w)
-        
-        # Mask: points that are "height_threshold" above the plane
-        above_plane = (z > 0) & (z < plane_z - height_threshold)
-        
-        return above_plane
 
     # --------------------------------------------------------
     # Service callback
@@ -484,13 +439,7 @@ class PoseEstimatorService(Node):
             # Remove invalid depth values
             depth[(depth < 0.1) | (depth > 3.0)] = 0
 
-            # above_table_mask = self.detect_table_plane(depth, K, height_threshold=0.02)
-            # color_masked = color.copy()
-            # color_masked[~above_table_mask] = 0
-            # color_masked = color.copy()
-            # color_masked[depth == 0] = 0 
-
-            # Test SAM2
+            # SAM2
             res = self.seg_model.predict(color)[0]
             res.save("masks.png")
             masks = res.masks.data.cpu().numpy()
@@ -566,43 +515,6 @@ class PoseEstimatorService(Node):
             # Combine with valid depth
             obj_mask = object_mask & (depth > 0)
 
-            # Debug: save both masks
-            cv2.imwrite("table_mask.png", (table_mask * 255).astype(np.uint8))
-            cv2.imwrite("selected_mask.png", (obj_mask * 255).astype(np.uint8))
-
-            # h, w = masks.shape[1:]
-            # center_y, center_x = h // 2, w // 2
-
-            # best_score = -1
-            # best_mask = None
-
-            # for mask in masks:
-            #     area = mask.sum()
-                
-            #     # Calculate mask centroid
-            #     y_indices, x_indices = np.where(mask)
-            #     if len(y_indices) == 0:
-            #         continue
-                
-            #     centroid_y = y_indices.mean()
-            #     centroid_x = x_indices.mean()
-                
-            #     # Distance to center
-            #     dist_to_center = np.sqrt((centroid_x - center_x)**2 + (centroid_y - center_y)**2)
-                
-            #     # Combined score: large area + close to center
-            #     score = area / (1 + dist_to_center * 0.01)  # Adjust weight
-                
-            #     if score > best_score:
-            #         best_score = score
-            #         best_mask = mask
-
-            # sam_mask = best_mask.astype(bool)
-            # obj_mask = sam_mask & (depth > 0)
-
-            # # Save mask for debugging
-            # cv2.imwrite("selected_mask.png", (obj_mask * 255).astype(np.uint8)) 
-
             # Run pose estimation
             pose = self.pose_estimator.register(
                 K=K,
@@ -625,6 +537,8 @@ class PoseEstimatorService(Node):
             vis = draw_posed_3d_box(
                 K, rgb, center_pose, self.bbox
             )
+
+            vis = draw_xyz_axis(vis, ob_in_cam=center_pose, scale=0.1, K=self.camera_K, thickness=3, transparency=0, is_input_rgb=True)
 
             decision = self.wait_for_user_decision(vis)
 

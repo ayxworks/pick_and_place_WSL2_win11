@@ -268,44 +268,46 @@ public:
         try
         {
 
-            // Move to home position
-            RCLCPP_INFO(this->get_logger(), "Moving to home position");
-            if (!move_to_named_target(home_position_) || !running_)
-            {
-                RCLCPP_ERROR(this->get_logger(), "Failed to move to home position");
-                return;
-            }
+            if (!attach_collision_object()) return;
 
-            // Move to observation position
-            RCLCPP_INFO(this->get_logger(), "Moving to observation position");
-            if (!move_to_named_target(observation_position_) || !running_)
-            {
-                RCLCPP_ERROR(this->get_logger(), "Failed to move to observation position");
-                return;
-            }
+            // // Move to home position
+            // RCLCPP_INFO(this->get_logger(), "Moving to home position");
+            // if (!move_to_named_target(home_position_) || !running_)
+            // {
+            //     RCLCPP_ERROR(this->get_logger(), "Failed to move to home position");
+            //     return;
+            // }
 
-            // Run object detection
-            if (!call_detect_service() || !running_)
-            {
-                RCLCPP_ERROR(this->get_logger(), "Object detection failed, aborting sequence");
-                return;
-            }
+            // // Move to observation position
+            // RCLCPP_INFO(this->get_logger(), "Moving to observation position");
+            // if (!move_to_named_target(observation_position_) || !running_)
+            // {
+            //     RCLCPP_ERROR(this->get_logger(), "Failed to move to observation position");
+            //     return;
+            // }
 
-            // Execute pick
-            if (!pick(pre_pick_frame_) || !running_)
-            {
-                RCLCPP_ERROR(this->get_logger(), "Pick failed, aborting");
-                return;
-            }
+            // // Run object detection
+            // if (!call_detect_service() || !running_)
+            // {
+            //     RCLCPP_ERROR(this->get_logger(), "Object detection failed, aborting sequence");
+            //     return;
+            // }
 
-            // Execute place
-            if (!place(pre_place_frame_) || !running_)
-            {
-                RCLCPP_ERROR(this->get_logger(), "Place failed, aborting");
-                return;
-            }
+            // // Execute pick
+            // if (!pick(pre_pick_frame_) || !running_)
+            // {
+            //     RCLCPP_ERROR(this->get_logger(), "Pick failed, aborting");
+            //     return;
+            // }
 
-            RCLCPP_INFO(this->get_logger(), "Pick and place sequence completed successfully");
+            // // Execute place
+            // if (!place(pre_place_frame_) || !running_)
+            // {
+            //     RCLCPP_ERROR(this->get_logger(), "Place failed, aborting");
+            //     return;
+            // }
+
+            // RCLCPP_INFO(this->get_logger(), "Pick and place sequence completed successfully");
         }
         catch (const std::exception &e)
         {
@@ -562,7 +564,7 @@ public:
     void set_ompl_planner()
     {
         arm_->setPlanningPipelineId("ompl");
-        arm_->setPlannerId("RRTConnectkConfigDefault");
+        arm_->setPlannerId("RRTstarkConfigDefault");
     }
 
 private:

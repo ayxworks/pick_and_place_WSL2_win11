@@ -49,6 +49,6 @@ pick_and_place_node:
 
     # Collision object parameters
     object_id: "picked_object"
-    object_length: 0.05  # metros (x)
-    object_width: 0.05   # metros (y)
-    object_height: 0.10  # metros (z)
+    object_length: 0.05  # meters (x)
+    object_width: 0.05   # meters (y)
+    object_height: 0.10  # meters (z)

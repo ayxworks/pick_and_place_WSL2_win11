@@ -151,7 +151,7 @@
   <!-- Realsense D435 Camera -->
 
   <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
-    <origin xyz="-1.090329 0.318755 0.635220" rpy="-0.015609 0.316050 0.494161"/>
+    <origin xyz="-1.090329 0.318755 0.635220" rpy="-0.015609 0.316050 0.494161"/> <!-- SET CAMERA EXTRINSICS -->
   </xacro:sensor_d435>
 
   <!-- ADDITIONAL FRAMES -->
@@ -162,7 +162,7 @@
   <joint name="charuco_board_joint" type="fixed">
     <parent link="robotiq_base_link"/>
     <child link="charuco_board"/>
-    <origin xyz="-0.15 0 0.15" rpy="0 0 -1.5708"/>
+    <origin xyz="-0.15 0 0.15" rpy="0 0 -1.5708"/> <!-- SET CALIBRATION BOARD FRAME -->
   </joint>
 
   <!-- Place Frame -->
@@ -171,6 +171,6 @@
   <joint name="object_place_joint" type="fixed">
     <parent link="world"/>
     <child link="object_place"/>
-    <origin xyz="-0.220 0.587 0.152" rpy="-3.083 0.018 -1.727"/>
+    <origin xyz="-0.220 0.587 0.152" rpy="-3.083 0.018 -1.727"/> <!-- SET OBJECT PLACE FRAME -->
   </joint>
 </robot>
