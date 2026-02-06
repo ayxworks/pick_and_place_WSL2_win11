@@ -191,6 +191,4 @@ pkill -f rclpy
 
 ## License
 
-This project is licensed under the [Apache License 2.0](LICENSE).
-
-You can find the full license text in the `LICENSE` file.
+See the [LICENSE](LICENSE) file for the full license text.
