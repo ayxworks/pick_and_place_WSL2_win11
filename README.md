@@ -13,7 +13,6 @@ This workspace provides:
 
 ## Prerequisites
 
-- **ROS 2 Humble** installed on your system
 - **Git** installed for cloning repositories
 - **Python 3.10+** for ROS 2 Humble
 - **Docker** and **docker-compose** (for containerized setup)
