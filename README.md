@@ -168,7 +168,7 @@ docker compose up --build
 - Ensure **External Control** program is active on UR teach pendant
 
 ### Robotiq Gripper Issues
-- **ERROR**: Ensure Robotiq Gripper URCap is **uninstalled** from the UR
+- Ensure Robotiq Gripper URCap is **uninstalled** from the UR
 - Check serial port: `ls /tmp/ttyUR` (should see device)
 
 ### Vision Pipeline Problems
