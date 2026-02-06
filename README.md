@@ -33,7 +33,7 @@ This workspace provides:
 | `setup_description` | URDF descriptions and robot configuration |
 | `setup_moveit_config` | MoveIt configuration for motion planning |
 | `pick_and_place` | Pick-and-place manipulation application (C++) |
-| `pick_and_place_gui` | Web-based GUI for pick-and-place control |
+| `pick_and_place_gui` | GUI for pick-and-place control |
 | `vision_pipeline` | Object detection and pose estimation using FoundationPose |
 | `camera_positioning` | Camera positioning and calibration |
 | `cam_flange_support` | Custom camera mount for UR flange |
