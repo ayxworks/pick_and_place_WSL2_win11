@@ -158,7 +158,11 @@ xhost +local:docker
 
 # 3. Build and launch the container
 docker compose up --build
+
+# 4. Play start to launch the Pick and Place task
 ```
+
+![GUI for starting Pick and Place task](rsc/1.png) 
 
 ## Troubleshooting
 
