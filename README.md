@@ -167,11 +167,6 @@ docker compose up --build
 - Check network connectivity: `ping $UR_ROBOT_IP`
 - Ensure **External Control** program is active on UR teach pendant
 
-### Build Failures
-- Clean rebuild: `colcon build --symlink-install --cmake-clean-first`
-- Check dependencies: `rosdep check --all --from-paths src`
-- Verify ROS 2 Humble is sourced: `echo $ROS_DISTRO`
-
 ### Robotiq Gripper Issues
 - **ERROR**: Ensure Robotiq Gripper URCap is **uninstalled** from the UR
 - Check serial port: `ls /tmp/ttyUR` (should see device)
