@@ -1,6 +1,6 @@
 # Vision-Based UR10e Pick and Place 
 
-A complete ROS 2 workspace for operating and controlling a UR10e collaborative robot with Robotiq gripper, integrated vision pipeline, and motion planning for a vision-based pick-and-place task.
+A complete ROS 2 workspace for operating and controlling a UR10e collaborative robot with a Robotiq 2F-140 gripper, using a RealSense D456 camera for an integrated vision pipeline and motion planning in a vision-based pick-and-place task.
 
 ## Overview
 
@@ -11,10 +11,16 @@ This workspace provides:
 - **Manipulation**: Pick-and-place application with integrated GUI
 - **Hardware**: Robotiq gripper control and custom camera flange support
 
+## Hardware Requirements
+
+- **Robot**: UR10e collaborative robot  
+- **End Effector**: Robotiq 2F-140 gripper  
+- **Camera**: Intel RealSense D456 (or any other RealSense depth camera) mounted on a custom flange  
+- **PC / Edge Computer**: Ubuntu 22.04 with GPU (for perception and planning)
+
 ## Prerequisites
 
 - **Git** installed for cloning repositories
-- **Python 3.10+** for ROS 2 Humble
 - **Docker** and **docker-compose** (for containerized setup)
 - **RealSense SDK** ([installation instructions](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md#installing-the-packages))
 - **UR Robot Setup**: Robotiq Gripper URCap **must be uninstalled** from the UR teach pendant before running this workspace
@@ -29,13 +35,9 @@ This workspace provides:
 | `pick_and_place` | Pick-and-place manipulation application (C++) |
 | `pick_and_place_gui` | Web-based GUI for pick-and-place control |
 | `vision_pipeline` | Object detection and pose estimation using FoundationPose |
-| `robotiq_controllers` | Robotiq gripper control interface |
-| `robotiq_driver` | Low-level Robotiq gripper communication |
 | `camera_positioning` | Camera positioning and calibration |
 | `cam_flange_support` | Custom camera mount for UR flange |
-| `serial` | Serial communication utilities |
-| `Universal_Robots_ROS2_Driver` | UR robot hardware driver and communication |
-| `Universal_Robots_ROS2_Description` | UR robot URDF and descriptions |
+
 ## Configuration and Setup
 ### Camera Positioning
 To position the camera, you first need a printed DICT_4X4 ChArUco board placed in a known and fixed location visible by the camera.

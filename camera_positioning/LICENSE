@@ -1,0 +1,28 @@
+Copyright (c) 2023, Acceleration Robotics. All rights reserved.
+
+This proprietary software is owned by Acceleration Robotics and is protected by copyright laws and international copyright treaties, as well as other intellectual property laws and treaties.
+
+**License Terms:**
+
+1. **Grant of License**: Subject to the terms and conditions of this License, Acceleration Robotics grants you a non-exclusive, non-transferable, limited right to use the software solely for your internal business purposes.
+
+2. **Restrictions**: 
+   - You may not modify, reverse engineer, decompile, or disassemble the software.
+   - You may not distribute, rent, lease, lend, sell, sublicense, or otherwise transfer the software or any portions thereof to any third party.
+   - You must retain all copyright notices on all copies of the software.
+
+3. **Clarification on Scope**: All files and folders that live underneath this license, regardless of what the development headers and/or metadata indicate, are licensed under this same proprietary license. Any such files and folders are considered part of the software and are subject to the same restrictions and permissions as outlined in this license. This license applies to this and any other branch in the corresponding official repository.
+
+4. **Ownership**: The software is licensed, not sold. Acceleration Robotics retains ownership of the software and all intellectual property rights therein.
+
+5. **Termination**: This license is effective until terminated. Your rights under this license will terminate automatically without notice if you fail to comply with any term(s) of this license. Upon termination, you must destroy all copies of the software in your possession or control.
+
+6. **Disclaimer of Warranty**: The software is provided "AS IS", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall Acceleration Robotics be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+
+7. **Limitation of Liability**: In no event shall Acceleration Robotics' liability exceed the license fee paid, if any.
+
+8. **Governing Law and Jurisdiction**: This license shall be governed by and construed in accordance with the laws of Spain. Any disputes arising out of or relating to this license or the use of the software shall be subject to the exclusive jurisdiction of the courts located in Spain.
+
+By using the software, you agree to abide by the terms and conditions set forth in this license.
+
+For any inquiries or requests for modifications to this license, please contact Acceleration Robotics at contact@accelerationrobotics.com.
