@@ -33,7 +33,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
 from ament_index_python.packages import get_package_share_directory
-from rclpy.executors import SingleThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor
 from std_srvs.srv import Trigger
 from threading import Lock
 import tf2_ros
@@ -48,6 +48,7 @@ from scipy.spatial.transform import Rotation as R
 from ultralytics import SAM
 import open3d as o3d
 from sklearn.linear_model import RANSACRegressor
+from threading import Thread, Event
 
 
 # ------------------------------------------------------------
@@ -186,6 +187,21 @@ class PoseEstimatorService(Node):
         self.create_service(
             Trigger, "estimate_pose", self.estimate_pose_callback, callback_group=self.service_cb_group
         )
+
+        # Image to be displayed in the UI thread
+        self.ui_image = None
+        # User decision coming from the UI thread
+        self.ui_decision = None
+        # Event used to notify the UI thread that a new image
+        self.ui_event = Event()
+        # Lock to protect shared UI data (image and decision)
+        self.ui_lock = Lock()
+        
+        
+        # Dedicated UI thread to handle OpenCV window and keyboard input
+        # Runs independently from ROS executor threads
+        self.ui_thread = Thread(target=self.ui_loop, daemon=True)
+        self.ui_thread.start()
 
         self.get_logger().info("Pose Estimator Service initialized")
 
@@ -384,6 +400,47 @@ class PoseEstimatorService(Node):
             (255, 255, 255), 2
         )
         return img
+    
+    def ui_loop(self):
+        """
+        Dedicated UI thread responsible for displaying pose estimation
+        visualizations and handling user interaction via an OpenCV window.
+        """
+        
+        window_created = False
+
+        while rclpy.ok():
+            self.ui_event.wait()
+            
+            with self.ui_lock:
+                img = self.ui_image.copy()
+
+            if not window_created:
+                cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+                cv2.resizeWindow(self.window_name, img.shape[1], img.shape[0])
+                window_created = True
+
+            while True:
+                cv2.imshow(self.window_name, img[..., ::-1])
+                k = cv2.waitKey(50) & 0xFF
+
+                if k in (ord("a"), ord("A")):
+                    self.ui_decision = "accept"
+                    break
+                if k in (ord("n"), ord("N")):
+                    self.ui_decision = "retry"
+                    break
+                if k in (ord("r"), ord("R"), 27):
+                    self.ui_decision = "reject"
+                    break
+
+            if self.ui_decision != "retry":
+                cv2.destroyWindow(self.window_name)
+                cv2.waitKey(1)
+                window_created = False
+
+            self.ui_event.clear()
+
 
 
     def wait_for_user_decision(self, image):
@@ -540,7 +597,17 @@ class PoseEstimatorService(Node):
 
             vis = draw_xyz_axis(vis, ob_in_cam=center_pose, scale=0.1, K=self.camera_K, thickness=3, transparency=0, is_input_rgb=True)
 
-            decision = self.wait_for_user_decision(vis)
+            # Wait for user decision in the UI thread 
+            with self.ui_lock:
+                self.ui_image = self.add_buttons_to_image(vis)
+                self.ui_decision = None
+
+            self.ui_event.set()
+
+            while self.ui_decision is None:
+                time.sleep(0.05)
+
+            decision = self.ui_decision
 
             if decision == "retry":
                 continue
@@ -562,7 +629,7 @@ def main():
     rclpy.init()
     node = PoseEstimatorService()
 
-    executor = SingleThreadedExecutor()
+    executor = MultiThreadedExecutor()
     executor.add_node(node)
 
     try:
