@@ -630,49 +630,49 @@ Each group has its own inverse kinematics solver.
 ### High-Level Data Flow
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                  Pick and Place GUI                          │
-│               (pick_and_place_gui.py)                        │
-│                                                               │
-│  [START Button] ──┐                                          │
-│  [STOP Button]  ──┼──> ROS Service Call (Trigger)           │
-└────────────────────┼──────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│            Pick and Place Controller Node                    │
-│         (pick_and_place_node.cpp)                           │
-│                                                               │
-│  1. Move arm to observation position                         │
-│  2. Call vision service: "Detect object"                     │
-│  3. Get object pose from TF broadcasts                       │
-│  4. Plan pick trajectory (using MoveIt)                      │
-│  5. Plan place trajectory (using MoveIt)                     │
-│  6. Execute and control gripper                             │
-└─────────────────────────────────────────────────────────────┘
-     │                    │                      │
-     │                    │                      │
-     ▼                    ▼                      ▼
-┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐
-│   MoveIt    │  │  Vision      │  │  Robot Driver       │
-│             │  │  Pipeline    │  │  (UR Controller)    │
-│ - Planning  │  │              │  │ - Low-level ctrl    │
-│ - IK Solver │  │ - Camera     │  │ - Joint control     │
-│ - Collision │  │ - FoundPose  │  │ - Safety           │
-│   Check     │  │ - TF Publish │  │                     │
-└─────────────┘  └──────────────┘  └─────────────────────┘
-     │                    │                      │
-     └────────────────────┴──────────────────────┘
-              ROS 2 Communication
-            (Topics, Services, TF)
-                     │
-                     ▼
-              ┌──────────────┐
-              │  UR10e Robot │
-              │   Robotiq    │
-              │   Gripper    │
-              │   Camera     │
-              └──────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    Pick and Place GUI                            │
+│                 (pick_and_place_gui.py)                          │
+│                                                                  │
+│  [START Button]  ──┐                                             │
+│  [STOP Button]  ──┼──> ROS Service Call (Trigger)                │
+└────────────────────┼─────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│             Pick and Place Controller Node                       │
+│               (pick_and_place_node.cpp)                          │
+│                                                                  │
+│  1. Move arm to observation position                             │
+│  2. Call vision service: "Detectobject"                          │
+│  3. Get object pose from TF broadcasts                           │
+│  4. Plan pick trajectory (using MoveIt)                          │
+│  5. Plan place trajectory (using MoveIt)                         │
+│  6. Execute and control gripper                                  │
+└──────────────────────────────────────────────────────────────────┘
+  │                     │                        │
+  │                     │                        │
+  ▼                     ▼                        ▼
+┌─────────────────┐  ┌──────────────────┐  ┌────────────────────────┐
+│     MoveIt      │  │      Vision      │  │       Robot Driver     │
+│                 │  │     Pipeline     │  │     (UR Controller)    │
+│ - Planning      │  │ - Camera         │  │ - Low-level ctrl       │
+│ - IK Solver     │  │ - FoundationPose │  │ - Joint control        │
+│ - Collision     │  │ - TF Publish     │  │ - Safety               │
+│   Check         │  │                  │  │                        │
+└─────────────────┘  └──────────────────┘  └────────────────────────┘
+  │                     │                        │
+  └─────────────────────┴────────────────────────┘
+         ROS 2 Communication
+       (Topics, Services, TF)
+            │
+            ▼
+        ┌────────────────┐
+        │   UR10e Robot   │
+        │    Robotiq      │
+        │     Gripper     │
+        │     Camera      │
+        └────────────────┘
 ```
 
 ### Process Execution
