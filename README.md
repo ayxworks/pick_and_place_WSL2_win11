@@ -411,7 +411,6 @@ Update the camera joint in `setup_description/urdf/robot.urdf.xacro`:
 
 ROS 2 (Robot Operating System 2) is a flexible framework for writing robot software. Think of it as a **middleware** that allows different robot components (robot driver, motion planner, perception system, user interface) to communicate with each other in a standardized way.
 
-**Key analogy**: If a robot is like a human body, ROS 2 is like the nervous system—it carries messages between different parts so they can coordinate.
 
 ### Core Concepts
 
@@ -450,7 +449,6 @@ Publisher (sends data) ---> Topic (channel) ---> Subscribers (receive data)
 
 Subscribers listening to these topics can react to new images immediately.
 
-**Analogy**: Like a radio station (publisher) broadcasting on a frequency (topic) that radios (subscribers) can tune into.
 
 ```python
 # Example: Subscribing to camera images (vision_node.py)
@@ -545,7 +543,6 @@ This asks: "What is the position and orientation of camera_link relative to base
 
 **MoveIt** is a motion planning library that solves the problem: **"How do I move my robot arm from point A to point B while avoiding collisions?"**
 
-Think of it as a **GPS for robots**—just like Google Maps finds a route avoiding traffic, MoveIt finds a collision-free path for the robot.
 
 ### Key Problems MoveIt Solves
 
@@ -1340,7 +1337,6 @@ For more information, refer to [the camera_positioning package documentation](ca
 
 ROS 2 (Robot Operating System 2) is a flexible framework for writing robot software. Think of it as a **middleware** that allows different robot components (robot driver, motion planner, perception system, user interface) to communicate with each other in a standardized way.
 
-**Key analogy**: If a robot is like a human body, ROS 2 is like the nervous system—it carries messages between different parts so they can coordinate.
 
 ### Core Concepts
 
@@ -1379,7 +1375,6 @@ Publisher (sends data) ---> Topic (channel) ---> Subscribers (receive data)
 
 Subscribers listening to these topics can react to new images immediately.
 
-**Analogy**: Like a radio station (publisher) broadcasting on a frequency (topic) that radios (subscribers) can tune into.
 
 ```python
 # Example: Subscribing to camera images (vision_node.py)
@@ -1474,7 +1469,6 @@ This asks: "What is the position and orientation of camera_link relative to base
 
 **MoveIt** is a motion planning library that solves the problem: **"How do I move my robot arm from point A to point B while avoiding collisions?"**
 
-Think of it as a **GPS for robots**—just like Google Maps finds a route avoiding traffic, MoveIt finds a collision-free path for the robot.
 
 ### Key Problems MoveIt Solves
 
