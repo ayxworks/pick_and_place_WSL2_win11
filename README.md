@@ -1,4 +1,4 @@
-# Technical Documentation: Vision-Based Autonomous Robot Pick and Place System
+# Vision-Based Autonomous Robot Pick and Place System
 
 ## Table of Contents
 1. [Introduction](#introduction)
