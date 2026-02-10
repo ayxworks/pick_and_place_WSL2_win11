@@ -1160,50 +1160,47 @@ Replace the Robotiq gripper:
 ```
 
 #### 3. Update MoveIt Configuration
-If the new gripper has different joints, update the SRDF:
+Update the SRDF file to define your gripper's joint groups and named target positions:
+
 ```xml
-<!-- For gripper with different joint names -->
-<group name="gripper">
+<!-- Define gripper joint group -->
+<group name="your_gripper_group">
   <joint name="your_gripper_finger_joint"/>
   <joint name="your_gripper_control_joint"/>
 </group>
 
 <!-- Define gripper as end effector -->
-<end_effector name="gripper" group="gripper" parent_group="manipulator" parent_link="tool0"/>
+<end_effector name="gripper" group="your_gripper_group" parent_group="manipulator" parent_link="tool0"/>
+
+<!-- Define named target positions for gripper control -->
+<!-- These are the positions that pick_and_place_node will call with setNamedTarget() -->
+<group_state name="gripper_open_position" group="your_gripper_group">
+  <joint name="your_gripper_finger_joint" value="0.04"/>  <!-- Open position -->
+  <joint name="your_gripper_control_joint" value="0.0"/>
+</group_state>
+
+<group_state name="gripper_closed_position" group="your_gripper_group">
+  <joint name="your_gripper_finger_joint" value="0.0"/>   <!-- Closed position -->
+  <joint name="your_gripper_control_joint" value="1.0"/>
+</group_state>
 ```
 
-#### 4. Update `pick_and_place/src/pick_and_place_node.cpp`
-The `setNamedTarget()` method is generic—it works with any gripper. The key is that the named positions must be defined in the SRDF:
-```cpp
-// This code is generic and works with ANY gripper
-// The magic is in the SRDF's named positions
-auto gripper = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-    node_, "your_gripper_group"  // Match the group name in your SRDF
-);
-
-// These calls work the same for any gripper
-gripper->setNamedTarget("gripper_closed_position");  // From SRDF
-gripper->move();
-
-gripper->setNamedTarget("gripper_open_position");    // From SRDF
-gripper->move();
-```
-
-**No C++ code changes needed** if your gripper supports named positions. The control method depends on what your SRDF defines.
-
-Update `pick_and_place/config/configuration.yaml`:
+The named positions you define here must match the configuration in `pick_and_place/config/configuration.yaml`:
 ```yaml
-# Update gripper move group name and positions (these MUST be defined in SRDF)
-gripper_move_group: "your_gripper_group"  # Must match SRDF group name
-gripper_open_position: "your_open_name"    # Must exist as a named position in SRDF
-gripper_closed_position: "your_close_name" # Must exist as a named position in SRDF
-
-# If your gripper doesn't support named positions (rare), you may need to:
-# - Add custom control via topics/services in pick_and_place_node.cpp
-# - Or create a simpler gripper controller node
+# Must match the group_state names defined in SRDF
+gripper_move_group: "your_gripper_group"        # Must match SRDF group name
+gripper_open_position: "gripper_open_position"   # Must match SRDF group_state name
+gripper_closed_position: "gripper_closed_position" # Must match SRDF group_state name
 ```
 
-#### 5. Update Collision Objects
+The C++ code will automatically use these named positions without any changes:
+```cpp
+// This works generically with any gripper configuration
+gripper->setNamedTarget("gripper_open_position");
+gripper->move();
+```
+
+#### 4. Update Collision Objects
 If the gripper has a different size/shape, update obstacles.yaml:
 ```yaml
 gripper_collision:
