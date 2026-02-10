@@ -13,7 +13,8 @@
 10. [Key Concepts](#key-concepts)
 11. [Development Guide](#development-guide)
 12. [Troubleshooting](#troubleshooting)
-13. [Contributors & License](#contributors--license)
+13. [Hardware Integration Guide](#hardware-integration-guide) 
+14. [Contributors & License](#contributors--license)
 
 ---
 
