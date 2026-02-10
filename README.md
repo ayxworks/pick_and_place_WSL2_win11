@@ -1075,7 +1075,7 @@ pkill -f rclpy
 
 ### Integrating a Different Robot Arm
 
-If you want to replace the UR10e with a different collaborative robot (e.g., ABB IRB 1200, KUKA KR10 R1100, Techman TM12), follow these steps:
+If you want to replace the UR10e with a different collaborative robot, follow these steps:
 
 #### 1. Find/Create URDF Description
 Most robot manufacturers provide ROS 2 packages with URDF descriptions:
@@ -1140,7 +1140,7 @@ Update `setup_launch/launch/pick_and_place.launch.py` to use your robot's driver
 
 ### Integrating a Different Gripper
 
-If you want to replace the Robotiq 2F-140 with a different gripper (e.g., Schunk PGN-plus, ONROBOT VGC10, Piab piCOBOT), follow these steps:
+If you want to replace the Robotiq 2F-140 with a different gripper, follow these steps:
 
 #### 1. Find/Create Gripper Description
 Most gripper manufacturers provide URDF models:
@@ -1215,7 +1215,7 @@ gripper_collision:
 
 ### Integrating a Different Camera
 
-If you want to use a different camera (e.g., Azure Kinect, Basler, Lucid Triton), follow these steps:
+If you want to use a different camera, follow these steps:
 
 #### 1. Install Camera Driver
 ```bash
