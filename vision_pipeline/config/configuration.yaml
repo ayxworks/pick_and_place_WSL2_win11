@@ -7,7 +7,7 @@ pose_estimator_service:
 
     # Path to the object's mesh file (.obj, .stl, etc.)
     # This mesh is used as the 3D reference model for pose estimation
-    mesh_file: "/ros2_ws/src/vision_pipeline/vision_pipeline/models/t_shape/t_shape.obj"
+    mesh_file: "/ros2_ws/src/vision_pipeline/vision_pipeline/models/t_shape/t_shape.stl"
 
     # RGB-D camera topics
     rgb_topic: "/camera/color/image_raw"
@@ -34,7 +34,7 @@ pose_estimator_service:
     position_offset:
       x: 0.0
       y: 0.0
-      z: 0.1
+      z: 0.05
 
     # Orientation offsets (in radians)
     # These offsets allow aligning the object's coordinate system

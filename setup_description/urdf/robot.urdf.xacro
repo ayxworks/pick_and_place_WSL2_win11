@@ -151,7 +151,7 @@
   <!-- Realsense D435 Camera -->
 
   <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
-    <origin xyz="-1.090329 0.318755 0.635220" rpy="-0.015609 0.316050 0.494161"/> <!-- SET CAMERA EXTRINSICS -->
+    <origin xyz="-1.093909 0.336769 0.632084" rpy="-0.061686 0.315636 0.434503"/> <!-- SET CAMERA EXTRINSICS -->
   </xacro:sensor_d435>
 
   <!-- ADDITIONAL FRAMES -->

@@ -33,22 +33,26 @@ pick_and_place_node:
 
     # Distance (in meters) for the final approach movement along the gripper's Z-axis
     # Linear motion from pre_pick_frame toward the object
-    pick_approach_distance: 0.10
+    pick_approach_distance: 0.05
 
     # Distance (in meters) for the retreat movement along the gripper's Z-axis after placing
     # Linear motion after opening the gripper at the place position
-    place_leave_distance: 0.10
+    place_leave_distance: 0.05
 
     # Distance (in meters) to lift the object vertically after grasping
     # Movement along the world's Z-axis after closing the gripper
-    lift_distance: 0.10
+    lift_distance: 0.02
 
     # Distance (in meters) to lower the object before releasing it
     # Movement along the world's Z-axis before opening the gripper (if implemented)
-    drop_distance: 0.10
+    drop_distance: 0.05
 
     # Collision object parameters
     object_id: "picked_object"
     object_length: 0.05  # meters (x)
     object_width: 0.05   # meters (y)
     object_height: 0.10  # meters (z)
+
+    # Velocity and acceleration scaling factors for trajectory execution (0.0 to 1.0)
+    velocity_scaling: 0.1
+    acceleration_scaling: 0.1

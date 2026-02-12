@@ -6,6 +6,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
 // ROS 2 node implementing a basic Pick & Place pipeline using MoveIt and TF
 class PickAndPlaceNode : public rclcpp::Node
@@ -56,6 +58,10 @@ public:
         // Read object detection service name
         detect_service_name_ = this->get_parameter("detect_service_name").as_string();
 
+        // Velocity and acceleration scaling factors
+        velocity_scaling_ = this->get_parameter("velocity_scaling").as_double();
+        acceleration_scaling_ = this->get_parameter("acceleration_scaling").as_double();
+
         // Create service client for object detection
         detect_client_ = this->create_client<std_srvs::srv::Trigger>(detect_service_name_);
 
@@ -80,6 +86,9 @@ public:
 
         gripper_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
             node_, gripper_move_group_);
+
+        arm_->setMaxVelocityScalingFactor(velocity_scaling_);
+        arm_->setMaxAccelerationScalingFactor(acceleration_scaling_);
 
         planning_scene_ = std::make_shared<moveit::planning_interface::PlanningSceneInterface>();
 
@@ -268,46 +277,44 @@ public:
         try
         {
 
-            if (!attach_collision_object()) return;
+            // Move to home position
+            RCLCPP_INFO(this->get_logger(), "Moving to home position");
+            if (!move_to_named_target(home_position_) || !running_)
+            {
+                RCLCPP_ERROR(this->get_logger(), "Failed to move to home position");
+                return;
+            }
 
-            // // Move to home position
-            // RCLCPP_INFO(this->get_logger(), "Moving to home position");
-            // if (!move_to_named_target(home_position_) || !running_)
-            // {
-            //     RCLCPP_ERROR(this->get_logger(), "Failed to move to home position");
-            //     return;
-            // }
+            // Move to observation position
+            RCLCPP_INFO(this->get_logger(), "Moving to observation position");
+            if (!move_to_named_target(observation_position_) || !running_)
+            {
+                RCLCPP_ERROR(this->get_logger(), "Failed to move to observation position");
+                return;
+            }
 
-            // // Move to observation position
-            // RCLCPP_INFO(this->get_logger(), "Moving to observation position");
-            // if (!move_to_named_target(observation_position_) || !running_)
-            // {
-            //     RCLCPP_ERROR(this->get_logger(), "Failed to move to observation position");
-            //     return;
-            // }
+            // Run object detection
+            if (!call_detect_service() || !running_)
+            {
+                RCLCPP_ERROR(this->get_logger(), "Object detection failed, aborting sequence");
+                return;
+            }
 
-            // // Run object detection
-            // if (!call_detect_service() || !running_)
-            // {
-            //     RCLCPP_ERROR(this->get_logger(), "Object detection failed, aborting sequence");
-            //     return;
-            // }
+            // Execute pick
+            if (!pick(pre_pick_frame_) || !running_)
+            {
+                RCLCPP_ERROR(this->get_logger(), "Pick failed, aborting");
+                return;
+            }
 
-            // // Execute pick
-            // if (!pick(pre_pick_frame_) || !running_)
-            // {
-            //     RCLCPP_ERROR(this->get_logger(), "Pick failed, aborting");
-            //     return;
-            // }
+            // Execute place
+            if (!place(pre_place_frame_) || !running_)
+            {
+                RCLCPP_ERROR(this->get_logger(), "Place failed, aborting");
+                return;
+            }
 
-            // // Execute place
-            // if (!place(pre_place_frame_) || !running_)
-            // {
-            //     RCLCPP_ERROR(this->get_logger(), "Place failed, aborting");
-            //     return;
-            // }
-
-            // RCLCPP_INFO(this->get_logger(), "Pick and place sequence completed successfully");
+            RCLCPP_INFO(this->get_logger(), "Pick and place sequence completed successfully");
         }
         catch (const std::exception &e)
         {
@@ -429,8 +436,6 @@ public:
         target_pose.pose.position.y += offset_planning_frame.vector.y;
         target_pose.pose.position.z += offset_planning_frame.vector.z;
         
-        arm_->setMaxVelocityScalingFactor(0.1);
-        arm_->setMaxAccelerationScalingFactor(0.1);
 
         bool success = move_cartesian_to_pose(target_pose);
 
@@ -490,7 +495,7 @@ public:
         // Compute cartesian path
         moveit_msgs::msg::RobotTrajectory trajectory;
         const double eef_step = 0.01;        // 1cm resolution
-        const double jump_threshold = 0.0;   // Disable jump detection
+        const double jump_threshold = 0.0;
         
         double fraction = arm_->computeCartesianPath(
             waypoints,
@@ -511,11 +516,33 @@ public:
             "Cartesian path computed: %.1f%% complete, executing...",
             fraction * 100.0);
 
-        // Execute the trajectory
+        // Manually time-parameterize the trajectory for slower execution
+        robot_trajectory::RobotTrajectory rt(
+        arm_->getCurrentState()->getRobotModel(),
+        arm_->getName());
+    
+        rt.setRobotTrajectoryMsg(*arm_->getCurrentState(), trajectory);
+
+        trajectory_processing::IterativeParabolicTimeParameterization iptp;
+
+        bool success = iptp.computeTimeStamps(
+            rt,
+            this->velocity_scaling_,
+            this->acceleration_scaling_);
+
+        if (!success)
+        {
+            RCLCPP_ERROR(this->get_logger(),
+                "Time parameterization failed");
+            return false;
+        }
+
+        rt.getRobotTrajectoryMsg(trajectory);
+
         moveit::planning_interface::MoveGroupInterface::Plan plan;
         plan.trajectory_ = trajectory;
         arm_->setStartStateToCurrentState();
-        bool success = (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
+        success = (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
         
         if (!success)
         {
@@ -601,6 +628,9 @@ private:
     std::atomic_bool running_{false};
     std::thread worker_thread_;
     std::thread executor_thread_;
+
+    double velocity_scaling_;
+    double acceleration_scaling_;
 };
 
 int main(int argc, char **argv)

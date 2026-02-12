@@ -46,8 +46,6 @@ from geometry_msgs.msg import TransformStamped
 from cv_bridge import CvBridge
 from scipy.spatial.transform import Rotation as R
 from ultralytics import SAM
-import open3d as o3d
-from sklearn.linear_model import RANSACRegressor
 from threading import Thread, Event
 
 
