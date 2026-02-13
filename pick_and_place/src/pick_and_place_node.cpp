@@ -496,16 +496,19 @@ public:
             waypoints.push_back(pose.pose);
 
             moveit_msgs::msg::RobotTrajectory trajectory;
+            const double eef_step = 0.01;
+            const double jump_threshold = 2.5
 
             double fraction = arm_->computeCartesianPath(
                 waypoints,
-                0.01,
-                2.5,
+                eef_step,
+                jump_threshold,
                 trajectory);
 
             if (fraction < 0.95)
                 return false;
 
+            // Manually time-parameterize the trajectory to apply velocity and acceleration scaling
             robot_trajectory::RobotTrajectory rt(
                 arm_->getCurrentState()->getRobotModel(),
                 arm_->getName());
