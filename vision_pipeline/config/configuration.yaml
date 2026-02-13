@@ -34,7 +34,7 @@ pose_estimator_service:
     position_offset:
       x: 0.0
       y: 0.0
-      z: 0.05
+      z: 0.1
 
     # Orientation offsets (in radians)
     # These offsets allow aligning the object's coordinate system

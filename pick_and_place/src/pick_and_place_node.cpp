@@ -62,6 +62,10 @@ public:
         velocity_scaling_ = this->get_parameter("velocity_scaling").as_double();
         acceleration_scaling_ = this->get_parameter("acceleration_scaling").as_double();
 
+        // Planning retries
+        planning_retries_ = this->get_parameter("planning_retries").as_int();
+
+
         // Create service client for object detection
         detect_client_ = this->create_client<std_srvs::srv::Trigger>(detect_service_name_);
 
@@ -242,31 +246,25 @@ public:
     // Move the arm to a named joint configuration in MoveIt
     bool move_to_named_target(const std::string &target_name)
     {
-        set_ompl_planner();
-        arm_->setStartStateToCurrentState();
-        arm_->setNamedTarget(target_name);
-        
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
+        return retry_planning([&]() {
 
-        if (arm_->plan(plan) != moveit::core::MoveItErrorCode::SUCCESS)
-        {
-            RCLCPP_ERROR(this->get_logger(),
-                "Planning failed for named target: %s", target_name.c_str());
-            return false;
-        }
+            set_ompl_planner();
+            arm_->setStartStateToCurrentState();
+            arm_->setNamedTarget(target_name);
 
-        auto exec_result = arm_->execute(plan);
-        arm_->clearPoseTargets();
+            moveit::planning_interface::MoveGroupInterface::Plan plan;
 
-        if (exec_result != moveit::core::MoveItErrorCode::SUCCESS)
-        {
-            RCLCPP_ERROR(this->get_logger(),
-                "Execution failed for named target: %s", target_name.c_str());
-            return false;
-        }
+            if (arm_->plan(plan) != moveit::core::MoveItErrorCode::SUCCESS)
+                return false;
 
-        return true;
+            auto exec_result = arm_->execute(plan);
+            arm_->clearPoseTargets();
+
+            return (exec_result == moveit::core::MoveItErrorCode::SUCCESS);
+
+        }, "Move to named target: " + target_name);
     }
+
 
     // Main Pick & Place sequence
     void execute_pick_and_place()
@@ -348,42 +346,46 @@ public:
     // Plan and execute motion to an absolute pose (OMPL)
     bool move_to_pose(const geometry_msgs::msg::PoseStamped &pose)
     {
-        set_ompl_planner();
-        arm_->setPoseTarget(pose);
+        return retry_planning([&]() {
 
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
-        bool success = (arm_->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
+            set_ompl_planner();
+            arm_->setStartStateToCurrentState();
+            arm_->setPoseTarget(pose);
 
-        if (success)
-        {
-            arm_->execute(plan);
+            moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+            if (arm_->plan(plan) != moveit::core::MoveItErrorCode::SUCCESS)
+                return false;
+
+            auto exec_result = arm_->execute(plan);
             arm_->clearPoseTargets();
-        }
-        else
-        {
-            RCLCPP_ERROR(this->get_logger(), "Motion planning failed");
-        }
-        return success;
+
+            return (exec_result == moveit::core::MoveItErrorCode::SUCCESS);
+
+        }, "Move to pose");
     }
+
 
     // Move the gripper to a named configuration
     bool move_gripper(const std::string &position_name)
     {
-        gripper_->setNamedTarget(position_name);
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
+        return retry_planning([&]() {
 
-        bool success = (gripper_->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-        if (success)
-        {
-            gripper_->execute(plan);
+            gripper_->setNamedTarget(position_name);
+
+            moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+            if (gripper_->plan(plan) != moveit::core::MoveItErrorCode::SUCCESS)
+                return false;
+
+            auto exec_result = gripper_->execute(plan);
             gripper_->clearPoseTargets();
-        }
-        else
-        {
-            RCLCPP_ERROR(this->get_logger(), "Gripper planning failed for %s", position_name.c_str());
-        }
-        return success;
+
+            return (exec_result == moveit::core::MoveItErrorCode::SUCCESS);
+
+        }, "Move gripper: " + position_name);
     }
+
 
     bool move_relative_to_end_effector(double x, double y, double z)
     {
@@ -488,72 +490,45 @@ public:
     // Move linearly to an absolute pose using Cartesian path
     bool move_cartesian_to_pose(const geometry_msgs::msg::PoseStamped &pose)
     {
-        // Create waypoints for cartesian path (only target, start is implicit)
-        std::vector<geometry_msgs::msg::Pose> waypoints;
-        waypoints.push_back(pose.pose);
+        return retry_planning([&]() {
 
-        // Compute cartesian path
-        moveit_msgs::msg::RobotTrajectory trajectory;
-        const double eef_step = 0.01;        // 1cm resolution
-        const double jump_threshold = 0.0;
-        
-        double fraction = arm_->computeCartesianPath(
-            waypoints,
-            eef_step,
-            jump_threshold,
-            trajectory);
+            std::vector<geometry_msgs::msg::Pose> waypoints;
+            waypoints.push_back(pose.pose);
 
-        // Check if we achieved the full path
-        if (fraction < 0.95)
-        {
-            RCLCPP_ERROR(this->get_logger(), 
-                "Cartesian path only %.1f%% complete - movement not possible",
-                fraction * 100.0);
-            return false;
-        }
+            moveit_msgs::msg::RobotTrajectory trajectory;
 
-        RCLCPP_INFO(this->get_logger(), 
-            "Cartesian path computed: %.1f%% complete, executing...",
-            fraction * 100.0);
+            double fraction = arm_->computeCartesianPath(
+                waypoints,
+                0.01,
+                2.5,
+                trajectory);
 
-        // Manually time-parameterize the trajectory for slower execution
-        robot_trajectory::RobotTrajectory rt(
-        arm_->getCurrentState()->getRobotModel(),
-        arm_->getName());
-    
-        rt.setRobotTrajectoryMsg(*arm_->getCurrentState(), trajectory);
+            if (fraction < 0.95)
+                return false;
 
-        trajectory_processing::IterativeParabolicTimeParameterization iptp;
+            robot_trajectory::RobotTrajectory rt(
+                arm_->getCurrentState()->getRobotModel(),
+                arm_->getName());
 
-        bool success = iptp.computeTimeStamps(
-            rt,
-            this->velocity_scaling_,
-            this->acceleration_scaling_);
+            rt.setRobotTrajectoryMsg(*arm_->getCurrentState(), trajectory);
 
-        if (!success)
-        {
-            RCLCPP_ERROR(this->get_logger(),
-                "Time parameterization failed");
-            return false;
-        }
+            trajectory_processing::IterativeParabolicTimeParameterization iptp;
 
-        rt.getRobotTrajectoryMsg(trajectory);
+            if (!iptp.computeTimeStamps(rt, velocity_scaling_, acceleration_scaling_))
+                return false;
 
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
-        plan.trajectory_ = trajectory;
-        arm_->setStartStateToCurrentState();
-        success = (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-        
-        if (!success)
-        {
-            RCLCPP_ERROR(this->get_logger(), "Cartesian trajectory execution failed");
-        }
+            rt.getRobotTrajectoryMsg(trajectory);
 
-        // Small delay to ensure stability
-        rclcpp::sleep_for(std::chrono::milliseconds(100));
+            moveit::planning_interface::MoveGroupInterface::Plan plan;
+            plan.trajectory_ = trajectory;
 
-        return success;
+            arm_->setStartStateToCurrentState();
+
+            return (arm_->execute(plan) == moveit::core::MoveItErrorCode::SUCCESS);
+
+        }, "Cartesian move");
     }
+
 
     // Place routine: approach, release, and retreat
     bool place(const std::string &target_frame)
@@ -595,6 +570,42 @@ public:
     }
 
 private:
+
+    template <typename Func>
+    bool retry_planning(Func &&func, const std::string &description)
+    {
+        for (int attempt = 1; attempt <= planning_retries_; ++attempt)
+        {
+            if (!running_)
+                return false;
+
+            RCLCPP_INFO(this->get_logger(),
+                "[%s] Attempt %d/%d",
+                description.c_str(), attempt, planning_retries_);
+
+            if (func())
+            {
+                RCLCPP_INFO(this->get_logger(),
+                    "[%s] Success on attempt %d",
+                    description.c_str(), attempt);
+                return true;
+            }
+
+            RCLCPP_WARN(this->get_logger(),
+                "[%s] Failed attempt %d/%d",
+                description.c_str(), attempt, planning_retries_);
+
+            arm_->clearPoseTargets();
+            rclcpp::sleep_for(std::chrono::milliseconds(200));
+        }
+
+        RCLCPP_ERROR(this->get_logger(),
+            "[%s] All %d attempts failed",
+            description.c_str(), planning_retries_);
+
+        return false;
+    } 
+
     rclcpp::Node::SharedPtr node_;
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
@@ -631,6 +642,8 @@ private:
 
     double velocity_scaling_;
     double acceleration_scaling_;
+
+    int planning_retries_;
 };
 
 int main(int argc, char **argv)
