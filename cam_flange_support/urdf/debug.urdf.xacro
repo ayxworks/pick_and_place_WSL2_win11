@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!-- This URDF has been used for debugging while developing the package -->
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="debugger_urdf" >
+
+  <link name="world"/>
+
+  <xacro:include filename="$(find cam_flange_support)/urdf/cam_flange_support_macro.urdf.xacro"/>
+
+  <xacro:cam_flange_support parent="world">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:cam_flange_support>
+
+</robot>

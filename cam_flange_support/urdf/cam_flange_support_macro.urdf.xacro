@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="cam_flange_support">
+
+    <xacro:macro name="cam_flange_support" params="
+        prefix:=''
+        parent
+        *origin
+        ">
+
+        <xacro:property name="stl_units_to_meters_factor" value="0.001" />
+        <xacro:property name="pi_halves" value="1.57079633" />
+        <xacro:property name="minus_pi_halves" value="-1.57079633" />
+
+        <xacro:include filename="$(find cam_flange_support)/urdf/gazebo_material_macro.urdf.xacro"/>
+
+        <link name="${prefix}cam_flange_support">
+            <visual>
+                <origin xyz="0 0 0"/>
+                <geometry>
+                    <mesh filename="file://$(find cam_flange_support)/meshes/visual/CamFlangeSupport.dae"
+                          scale="${stl_units_to_meters_factor} ${stl_units_to_meters_factor} ${stl_units_to_meters_factor}" />
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0"/>
+                <geometry>
+                    <mesh filename="file://$(find cam_flange_support)/meshes/collision/CamFlangeSupport.stl"
+                          scale="${stl_units_to_meters_factor} ${stl_units_to_meters_factor} ${stl_units_to_meters_factor}" />
+                </geometry>
+            </collision>
+        </link>
+
+        <link name="${prefix}cam_flange_ring_flange">
+            <visual>
+                <origin xyz="0 0 0"/>
+                <geometry>
+                    <mesh filename="file://$(find cam_flange_support)/meshes/visual/RingFlange.dae" 
+                          scale="${stl_units_to_meters_factor} ${stl_units_to_meters_factor} ${stl_units_to_meters_factor}" />
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0"/>
+                <geometry>
+                    <mesh filename="file://$(find cam_flange_support)/meshes/collision/RingFlange.stl" 
+                          scale="${stl_units_to_meters_factor} ${stl_units_to_meters_factor} ${stl_units_to_meters_factor}" />
+                </geometry>
+            </collision>
+        </link>
+
+        <joint name="${prefix}cam_flange_support_to_ring_flange" type="fixed">
+            <parent link="${prefix}cam_flange_support" />
+            <child link="${prefix}cam_flange_ring_flange" />
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </joint>
+
+        <!-- Mounting frames -->
+        <link name="${prefix}cam_flange_support_mounting"/>
+        <joint name="${prefix}${parent}_to_cam_flange_support_mounting" type="fixed">
+            <parent link="${parent}" />
+            <child link="${prefix}cam_flange_support_mounting" />
+            <xacro:insert_block name="origin"/>
+        </joint>
+
+        <joint name="${prefix}cam_flange_mounting_to_support" type="fixed">
+            <parent link="${prefix}cam_flange_support_mounting" />
+            <child link="${prefix}cam_flange_support" />
+            <origin xyz="0 0 0" rpy="${minus_pi_halves} 0 0" />
+        </joint>
+
+        <link name="${prefix}cam_flange_ring_mounting"/>
+
+        <joint name="${prefix}cam_flange_ring_to_mounting" type="fixed">
+            <parent link="${prefix}cam_flange_ring_flange" />
+            <child link="${prefix}cam_flange_ring_mounting" />
+            <origin xyz="0 -0.0086 0" rpy="${pi_halves} 0 0" />
+        </joint>
+
+        <!-- Additional holes in the camera support -->
+        <link name="${prefix}vertical_hole_1" />
+        <joint name="${prefix}cam_flange_support_to_vertical_hole_1" type="fixed">
+            <parent link="${prefix}cam_flange_support" />
+            <child link="${prefix}vertical_hole_1" />
+            <origin xyz="0 0 0.041" rpy="0 0 0"/>
+        </joint>
+
+        <link name="${prefix}vertical_hole_2" />
+        <joint name="${prefix}vertical_hole_1_to_2" type="fixed">
+            <parent link="${prefix}vertical_hole_1" />
+            <child link="${prefix}vertical_hole_2" />
+            <origin xyz="0 0 0.0075" rpy="0 0 0"/>
+        </joint>
+
+        <link name="${prefix}vertical_hole_3" />
+        <joint name="${prefix}vertical_hole_2_to_3" type="fixed">
+            <parent link="${prefix}vertical_hole_2" />
+            <child link="${prefix}vertical_hole_3" />
+            <origin xyz="0 0 0.0075" rpy="0 0 0"/>
+        </joint>
+
+        <link name="${prefix}vertical_hole_4" />
+        <joint name="${prefix}vertical_hole_3_to_4" type="fixed">
+            <parent link="${prefix}vertical_hole_3" />
+            <child link="${prefix}vertical_hole_4" />
+            <origin xyz="0 0 0.01" rpy="0 0 0"/>
+        </joint>
+
+        <link name="${prefix}vertical_hole_5" />
+        <joint name="${prefix}vertical_hole_4_to_5" type="fixed">
+            <parent link="${prefix}vertical_hole_4" />
+            <child link="${prefix}vertical_hole_5" />
+            <origin xyz="0 0 0.01" rpy="0 0 0"/>
+        </joint>
+
+    </xacro:macro>
+</robot>

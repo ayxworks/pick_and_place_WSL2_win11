@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="gazebo_material">
+    <!-- Give color to robot in Gazebo (If using prefixes, you will need to change this file) -->
+    <xacro:macro name="apply_gazebo_material" params="link_name red green blue intensity:=1">
+        <gazebo reference="${link_name}">
+            <visual name="${link_name}">
+            <material>
+                <ambient>${red} ${green} ${blue} ${intensity}</ambient>
+                <diffuse>${red} ${green} ${blue} ${intensity}</diffuse>
+                <specular>0.1 0.1 0.1 1</specular>
+                <emissive>0 0 0 1</emissive>
+            </material>
+            </visual>
+        </gazebo>
+    </xacro:macro>
+</robot>

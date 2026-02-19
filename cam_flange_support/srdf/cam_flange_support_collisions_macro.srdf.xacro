@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="cam_flange_support_collisions" params="
+    prefix=''
+    parent_1:='None'
+    parent_2:='None'
+    parent_3:='None'
+    parent_4:='None'
+    parent_5:='None'
+    child_1:='None'
+    child_2:='None'
+    ">
+
+    <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${prefix}cam_flange_support" reason="Adjacent"/>
+
+    <xacro:unless value="${parent_1 == 'None'}">
+      <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${parent_1}" reason="Never"/>
+      <disable_collisions link1="${prefix}cam_flange_support" link2="${parent_1}" reason="Never"/>
+    </xacro:unless>
+    
+    <xacro:unless value="${parent_2 == 'None'}">
+      <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${parent_2}" reason="Never"/>
+      <disable_collisions link1="${prefix}cam_flange_support" link2="${parent_2}" reason="Never"/>
+    </xacro:unless>
+
+    <xacro:unless value="${parent_3 == 'None'}">
+      <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${parent_3}" reason="Never"/>
+      <disable_collisions link1="${prefix}cam_flange_support" link2="${parent_3}" reason="Never"/>
+    </xacro:unless>
+
+    <xacro:unless value="${parent_4 == 'None'}">
+      <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${parent_4}" reason="Never"/>
+      <disable_collisions link1="${prefix}cam_flange_support" link2="${parent_4}" reason="Never"/>
+    </xacro:unless>
+
+    <xacro:unless value="${parent_5 == 'None'}">
+      <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${parent_5}" reason="Never"/>
+      <disable_collisions link1="${prefix}cam_flange_support" link2="${parent_5}" reason="Never"/>
+    </xacro:unless>
+
+    <xacro:unless value="${child_1 == 'None'}">
+      <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${child_1}" reason="Never"/>
+      <disable_collisions link1="${prefix}cam_flange_support" link2="${child_1}" reason="Never"/>
+    </xacro:unless>
+
+    <xacro:unless value="${child_2 == 'None'}">
+      <disable_collisions link1="${prefix}cam_flange_ring_flange" link2="${child_2}" reason="Never"/>
+      <disable_collisions link1="${prefix}cam_flange_support" link2="${child_2}" reason="Never"/>
+    </xacro:unless>
+
+  </xacro:macro>
+</robot>
