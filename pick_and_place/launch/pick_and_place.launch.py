@@ -35,6 +35,15 @@ def generate_launch_description():
         choices=["true", "false"],
     )
 
+    use_cam_flange_support = LaunchConfiguration("use_cam_flange_support")
+
+    declare_use_cam_flange_support = DeclareLaunchArgument(
+        "use_cam_flange_support",
+        default_value="false",
+        description="Use cam flange support in the robot description",
+        choices=["true", "false"],
+    )
+
     pkg_share = get_package_share_directory('pick_and_place')
 
     params_file = os.path.join(
@@ -74,6 +83,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             "use_sim": use_sim,
+            "use_cam_flange_support": use_cam_flange_support,
         }.items(),
     )
 
@@ -102,6 +112,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         declare_use_sim,
+        declare_use_cam_flange_support,
         pick_and_place_node,
         publish_obstacles_launch,
         pick_and_place_gui_node,

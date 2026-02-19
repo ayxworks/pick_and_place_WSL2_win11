@@ -164,7 +164,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_cam_flange_support',
-            default_value='true',
+            default_value='false',
             description='Whether to include cam flange support.',
             choices=["true", "false"],
         ),
