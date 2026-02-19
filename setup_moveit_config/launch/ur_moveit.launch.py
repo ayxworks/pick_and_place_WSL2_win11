@@ -191,10 +191,13 @@ def launch_setup(context, *args, **kwargs):
         )
     }
 
-    # Planning Configuration - OMPL
-    ompl_planning_pipeline_config = {
+    planning_pipelines_config = {
         "planning_pipelines": ["ompl", "pilz_industrial_motion_planner"],
         "default_planning_pipeline": "ompl",
+    }
+
+    # Planning Configuration - OMPL
+    ompl_planning_pipeline_config = {
         "ompl": {
             "planning_plugin": "ompl_interface/OMPLPlanner",
             "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
@@ -265,6 +268,7 @@ def launch_setup(context, *args, **kwargs):
             publish_robot_description_semantic,
             robot_description_kinematics,
             robot_description_planning,
+            planning_pipelines_config,
             ompl_planning_pipeline_config,
             pilz_planning_pipeline_config,
             pilz_cartesian_limits,
