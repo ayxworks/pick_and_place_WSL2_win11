@@ -48,7 +48,10 @@ def generate_launch_description():
         executable='pick_and_place_node',
         name='pick_and_place_node',
         output='screen',
-        parameters=[params_file]
+        parameters=[
+            params_file,
+            {"use_sim_time": use_sim},
+        ],
     )
 
     publish_obstacles_launch = IncludeLaunchDescription(

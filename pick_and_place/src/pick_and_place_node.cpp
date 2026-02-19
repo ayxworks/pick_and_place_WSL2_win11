@@ -273,7 +273,7 @@ public:
         rclcpp::sleep_for(std::chrono::seconds(1));
 
         try
-        {
+        {   
 
             // Move to home position
             RCLCPP_INFO(this->get_logger(), "Moving to home position");
@@ -497,7 +497,7 @@ public:
 
             moveit_msgs::msg::RobotTrajectory trajectory;
             const double eef_step = 0.01;
-            const double jump_threshold = 2.5
+            const double jump_threshold = 2.5;
 
             double fraction = arm_->computeCartesianPath(
                 waypoints,
