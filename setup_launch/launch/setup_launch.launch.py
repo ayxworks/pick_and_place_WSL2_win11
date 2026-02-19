@@ -112,8 +112,10 @@ def launch_setup(context, *args, **kwargs):
     nodes = [
         ur_control_launch, 
         moveit_launch,
-        realsense_launch,
     ]
+
+    if use_sim.perform(context) == "false":
+        nodes.append(realsense_launch)
     
     return nodes
 

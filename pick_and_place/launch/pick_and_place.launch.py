@@ -94,7 +94,10 @@ def generate_launch_description():
                     "vision_node.launch.py",
                 ]
             )
-        )
+        ),
+        launch_arguments={
+            "use_sim": use_sim,
+        }.items(),
     )
 
     return LaunchDescription([

@@ -70,8 +70,11 @@ cd eurobots_ws
 # 2. Configure X11 access for Docker
 xhost +local:docker
 
-# 3. Build and launch the container
+# 3a. Build and launch the container
 docker compose up --build
+
+# 3b. Or launch in simulation mode (no robot hardware required)
+USE_SIM=true docker compose up --build
 
 # 4. Click START to launch the Pick and Place task
 ```
@@ -107,6 +110,10 @@ This file defines the pick-and-place task parameters:
 | **drop_distance** | Distance (meters) to lower object before releasing |
 | **object_id** | Identifier for collision object in MoveIt |
 | **object_length/width/height** | Dimensions of the object being picked (meters) |
+| **velocity/acceleration scaling** | Velocity and acceleration scaling factors for trajectory execution (0.0 to 1.0) |
+| **planning_retries** | Planning retries: number of attempts to replan if motion execution fails | 
+
+
 
 #### `pick_and_place/config/obstacles.yaml`
 
@@ -124,6 +131,28 @@ This file defines collision objects in the planning scene:
 - `table`: Work surface with negative Z to avoid collision below table
 - `obstacle`: Barrier in the workspace
 - `cell`: Boundary constraint
+
+### `vision_pipeline/config/configuration.yaml`
+
+This file configures the pose estimation node (`pose_estimator_service`) which uses FoundationPose to detect objects and estimate their 6D position and orientation.
+
+| Parameter | Description |
+|-----------|-------------|
+| **object_frame** | Name of the TF frame that will be published with the estimated object pose (e.g., "object") |
+| **object_frame_pick** | Alternative TF frame for the object pose during pick operations |
+| **mesh_file** | Path to the object's 3D mesh file (.obj, .stl, etc.) used as the reference model for pose estimation |
+| **rgb_topic** | ROS topic for the camera's RGB image |
+| **depth_topic** | ROS topic for the depth image aligned with the RGB image |
+| **camera_info_topic** | ROS topic with camera calibration parameters (intrinsics) |
+| **camera_frame** | Camera optical frame (reference frame). The estimated pose is published relative to this frame |
+| **debug** | Debug level (0-3):<br>• `0`: No debug<br>• `1`: Save pose to file + basic visualization<br>• `2`: Save visualizations to disk<br>• `3`: Save transformed model and point cloud |
+| **debug_dir** | Directory where debug files are saved |
+| **position_offset** | Position offsets (meters) applied to the estimated pose before publishing it as TF. Useful for compensating systematic errors or adjusting the reference point:<br>• `x`: X offset<br>• `y`: Y offset<br>• `z`: Z offset |
+| **orientation_offset** | Orientation offsets (radians) to align the object's coordinate system with the gripper's coordinate system:<br>• `roll`: Rotation around the X axis<br>• `pitch`: Rotation around the Y axis<br>• `yaw`: Rotation around the Z axis |
+| **estimation_params** | FoundationPose algorithm-specific parameters:<br>• `est_refine_iter`: Number of refinement iterations in the initial estimation (`register`). Recommended: 5-6 for simple objects, 8-10 for complex objects. Higher value = more accurate but slower.<br>• `track_refine_iter`: Number of refinement iterations in tracking mode, used when the service is called multiple times consecutively. Recommended: 2-3 (faster than `register`). |
+| **sim_rgb_path** | Path to simulation RGB image (for testing without a camera) |
+| **sim_depth_path** | Path to simulation depth image (for testing without a camera) |
+
 
 #### `setup_description/urdf/robot.urdf.xacro`
 

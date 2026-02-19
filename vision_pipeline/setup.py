@@ -38,6 +38,8 @@ setup(
         # Incluir mycpp
         *package_files("vision_pipeline/FoundationPose/mycpp/build", os.path.join("lib/python3.10/site-packages", package_name, "FoundationPose/mycpp/build")), 
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
+        # Incluir recursos de simulacion
+        ( os.path.join("share", package_name, "sim_rsc"), glob("sim_rsc/*.*")), 
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -53,6 +55,7 @@ setup(
     entry_points={
         "console_scripts": [
             "vision_node = vision_pipeline.vision_node:main",
+            "publish_sim_camera_frames = vision_pipeline.publish_sim_camera_frames:main",
         ],
     },
 )

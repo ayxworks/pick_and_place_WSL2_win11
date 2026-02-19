@@ -184,6 +184,8 @@ public:
         touch_links.push_back(arm_->getEndEffectorLink());
         touch_links.push_back("left_inner_finger_pad");
         touch_links.push_back("right_inner_finger_pad");
+        touch_links.push_back("right_inner_finger");
+        touch_links.push_back("left_inner_finger");
         arm_->attachObject(object_id_, arm_->getEndEffectorLink(), touch_links);
 
         RCLCPP_INFO(this->get_logger(), "Object '%s' attached to end-effector", object_id_.c_str());

@@ -57,3 +57,7 @@ pose_estimator_service:
       # Higher value = more accurate but slower
       # Recommended: 2-3 (tracking is faster than register)
       track_refine_iter: 2
+
+    # Simulation parameters 
+    sim_rgb_path: "sim_rsc/rgb.png"
+    sim_depth_path: "sim_rsc/depth.png"

@@ -20,8 +20,9 @@ services:
       - /dev/bus/usb:/dev/bus/usb
     environment:
       - DISPLAY=${DISPLAY}
-      - ROS_DOMAIN_ID=71
+      - ROS_DOMAIN_ID=0
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - USE_SIM=${USE_SIM:-false}
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /dev:/dev
@@ -29,5 +30,5 @@ services:
       bash -c "
       source /opt/ros/humble/setup.bash &&
       source /ros2_ws/install/setup.bash &&
-      ros2 launch pick_and_place pick_and_place.launch.py use_sim:=true
+      ros2 launch pick_and_place pick_and_place.launch.py use_sim:=${USE_SIM}
       "
