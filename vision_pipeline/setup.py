@@ -56,6 +56,7 @@ setup(
         "console_scripts": [
             "vision_node = vision_pipeline.vision_node:main",
             "publish_sim_camera_frames = vision_pipeline.publish_sim_camera_frames:main",
+            "sim_camera_publisher = vision_pipeline.sim_camera_publisher:main",
         ],
     },
 )

@@ -44,9 +44,18 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(use_sim)
     )
+
+    sim_camera_publisher_node = Node(
+        package='vision_pipeline',
+        executable='sim_camera_publisher',
+        name='sim_camera_publisher',
+        output='screen',
+        condition=IfCondition(use_sim)
+    )
     
     return LaunchDescription([
         use_sim_arg,
         vision_pipeline_node,
-        sim_camera_frames_node
+        sim_camera_frames_node,
+        sim_camera_publisher_node
     ])

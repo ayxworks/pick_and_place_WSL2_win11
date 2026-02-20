@@ -459,6 +459,9 @@ public:
         if (!move_to_pose(pre_pick_pose)) 
             return false;
 
+        RCLCPP_INFO(this->get_logger(), "Opening gripper");
+        if (!move_gripper(gripper_open_position_)) return false;
+
         // Relative movement in Z direction of the gripper
         RCLCPP_INFO(this->get_logger(), "Approaching object (%.3f m in gripper Z)", 
                 pick_approach_distance_);

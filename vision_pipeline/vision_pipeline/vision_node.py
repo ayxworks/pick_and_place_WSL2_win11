@@ -128,11 +128,6 @@ class PoseEstimatorService(Node):
             "estimation_params.est_refine_iter"
         ).value
 
-        # Simulation parameters 
-        self.use_sim = self.get_parameter("use_sim").value
-        self.sim_rgb_path = self.get_parameter("sim_rgb_path").value
-        self.sim_depth_path = self.get_parameter("sim_depth_path").value
-
 
         # ----------------------------------------------------
         # ROS utilities
@@ -176,32 +171,19 @@ class PoseEstimatorService(Node):
         self.sensor_cb_group = ReentrantCallbackGroup()
         self.service_cb_group = MutuallyExclusiveCallbackGroup()
 
-        if not self.use_sim:
-            self.create_subscription(
-                Image, self.rgb_topic, self.rgb_callback, 10,
-                callback_group=self.sensor_cb_group
-            )
-            self.create_subscription(
-                Image, self.depth_topic, self.depth_callback, 10,
-                callback_group=self.sensor_cb_group
-            )
-            self.create_subscription(
-                CameraInfo, self.camera_info_topic,
-                self.camera_info_callback, 10,
-                callback_group=self.sensor_cb_group
-            )
-        else:
-            self.get_logger().info("Simulation mode: camera topics disabled")
-
-        # In simulation mode, we use fixed camera intrinsics since we don't receive CameraInfo messages 
-        if self.use_sim:
-            self.get_logger().info("Simulation mode: using fixed camera intrinsics")
-            self.camera_K = np.array([
-                [643.9330444335938, 0.0, 647.38623046875],
-                [0.0, 643.3321533203125, 352.8768615722656],
-                [0.0, 0.0, 1.0]
-            ])
-            self.camera_info_received = True
+        self.create_subscription(
+            Image, self.rgb_topic, self.rgb_callback, 10,
+            callback_group=self.sensor_cb_group
+        )
+        self.create_subscription(
+            Image, self.depth_topic, self.depth_callback, 10,
+            callback_group=self.sensor_cb_group
+        )
+        self.create_subscription(
+            CameraInfo, self.camera_info_topic,
+            self.camera_info_callback, 10,
+            callback_group=self.sensor_cb_group
+        )
 
 
         # Pose estimation service
@@ -498,47 +480,16 @@ class PoseEstimatorService(Node):
         """
         
         while True:
-            if self.use_sim:
-                self.get_logger().info("Using simulated images")
 
-                pkg_share = get_package_share_directory("vision_pipeline")
+            if not (self.rgb_received and self.depth_received and self.camera_info_received):
+                response.success = False
+                response.message = "Missing sensor data"
+                return response
 
-                sim_rgb_full_path = os.path.join(pkg_share, self.sim_rgb_path)
-                sim_depth_full_path = os.path.join(pkg_share, self.sim_depth_path)
-
-                rgb = cv2.imread(sim_rgb_full_path)
-                if rgb is None:
-                    response.success = False
-                    response.message = "Could not load sim RGB image"
-                    return response
-
-                rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
-
-                depth = cv2.imread(sim_depth_full_path, cv2.IMREAD_UNCHANGED)
-                if depth is None:
-                    response.success = False
-                    response.message = "Could not load sim depth image"
-                    return response
-
-                depth = depth.astype(np.float32) / 1000.0
-
-                if not self.camera_info_received:
-                    response.success = False
-                    response.message = "Camera info not received"
-                    return response
-
+            with self.lock:
+                rgb = self.latest_rgb.copy()
+                depth = self.latest_depth.copy()
                 K = self.camera_K.copy()
-
-            else:
-                if not (self.rgb_received and self.depth_received and self.camera_info_received):
-                    response.success = False
-                    response.message = "Missing sensor data"
-                    return response
-
-                with self.lock:
-                    rgb = self.latest_rgb.copy()
-                    depth = self.latest_depth.copy()
-                    K = self.camera_K.copy()
 
 
             stamp = self.get_clock().now().to_msg()
